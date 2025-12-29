@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics Dashboard - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">Analytics Dashboard</span>
+            <div>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm me-2">← Dashboard</a>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mb-4">Data Analytics for Decision Support</h2>
+
+        <!-- Summary Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="stat-card text-center">
+                    <h3><%= summary.totalEvents %></h3>
+                    <small>Total Events</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card text-center">
+                    <h3><%= summary.totalRegistrations %></h3>
+                    <small>Total Registrations</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card text-center">
+                    <h3><%= summary.totalAttendees %></h3>
+                    <small>Total Attendees</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card text-center">
+                    <h3>₹<%= parseFloat(summary.totalIncome).toLocaleString() %></h3>
+                    <small>Total Income</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card text-center">
+                    <h3>₹<%= parseFloat(summary.totalExpenditure).toLocaleString() %></h3>
+                    <small>Total Expenditure</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card text-center">
+                    <h3>₹<%= parseFloat(summary.netProfit).toLocaleString() %></h3>
+                    <small>Net Profit</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Analytics -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h4>Recent Event Attendance</h4>
+                    <canvas id="attendanceChart" height="200"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h4>Top 5 Events by Attendance</h4>
+                    <canvas id="topEventsChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Analytics -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h4>Budget Utilization</h4>
+                    <canvas id="budgetChart" height="200"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h4>Budget vs Expenditure</h4>
+                    <canvas id="budgetExpenditureChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Tables -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5>Event Turnout Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Registrations</th>
+                                    <th>Attendance</th>
+                                    <th>% Attendance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% turnoutData.forEach(event => { %>
+                                    <tr>
+                                        <td><%= event.EventName %></td>
+                                        <td><%= event.registrationCount %></td>
+                                        <td><%= event.attendanceCount %></td>
+                                        <td><%= event.attendancePercentage %>%</td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5>Budget Utilization</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Budget</th>
+                                    <th>Spent</th>
+                                    <th>Utilization %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% budgetData.forEach(event => { %>
+                                    <tr>
+                                        <td><%= event.EventName %></td>
+                                        <td>₹<%= parseFloat(event.totalBudget).toLocaleString() %></td>
+                                        <td>₹<%= parseFloat(event.totalExpenditure).toLocaleString() %></td>
+                                        <td><%= event.budgetUtilizationPercent %>%</td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Attendance Chart
+        const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+        new Chart(attendanceCtx, {
+            type: 'bar',
+            data: {
+                labels: [<% turnoutData.forEach((event, index) => { %>"<%= event.EventName %>"<% if(index < turnoutData.length - 1) { %>, <% } }) %>],
+                datasets: [{
+                    label: 'Registrations',
+                    data: [<% turnoutData.forEach((event, index) => { %><%= event.registrationCount %><% if(index < turnoutData.length - 1) { %>, <% } }) %>],
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Attendance',
+                    data: [<% turnoutData.forEach((event, index) => { %><%= event.attendanceCount %><% if(index < turnoutData.length - 1) { %>, <% } }) %>],
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Top Events Chart
+        const topEventsCtx = document.getElementById('topEventsChart').getContext('2d');
+        new Chart(topEventsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [<% turnoutData.slice(0, 5).forEach((event, index) => { %>"<%= event.EventName %>"<% if(index < Math.min(4, turnoutData.length - 1)) { %>, <% } }) %>],
+                datasets: [{
+                    data: [<% turnoutData.slice(0, 5).forEach((event, index) => { %><%= event.attendanceCount %><% if(index < Math.min(4, turnoutData.length - 1)) { %>, <% } }) %>],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 205, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Budget Chart
+        const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+        new Chart(budgetCtx, {
+            type: 'line',
+            data: {
+                labels: [<% budgetData.forEach((event, index) => { %>"<%= event.EventName %>"<% if(index < budgetData.length - 1) { %>, <% } }) %>],
+                datasets: [{
+                    label: 'Budget',
+                    data: [<% budgetData.forEach((event, index) => { %><%= event.totalBudget %><% if(index < budgetData.length - 1) { %>, <% } }) %>],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: false
+                }, {
+                    label: 'Expenditure',
+                    data: [<% budgetData.forEach((event, index) => { %><%= event.totalExpenditure %><% if(index < budgetData.length - 1) { %>, <% } }) %>],
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Budget vs Expenditure Chart
+        const budgetExpenditureCtx = document.getElementById('budgetExpenditureChart').getContext('2d');
+        new Chart(budgetExpenditureCtx, {
+            type: 'bar',
+            data: {
+                labels: [<% budgetData.slice(0, 5).forEach((event, index) => { %>"<%= event.EventName %>"<% if(index < Math.min(4, budgetData.length - 1)) { %>, <% } }) %>],
+                datasets: [{
+                    label: 'Budget',
+                    data: [<% budgetData.slice(0, 5).forEach((event, index) => { %><%= event.totalBudget %><% if(index < Math.min(4, budgetData.length - 1)) { %>, <% } }) %>],
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Expenditure',
+                    data: [<% budgetData.slice(0, 5).forEach((event, index) => { %><%= event.totalExpenditure %><% if(index < Math.min(4, budgetData.length - 1)) { %>, <% } }) %>],
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

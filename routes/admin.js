@@ -487,6 +487,169 @@ router.get("/reports/budget-utilization", isAdmin, (req, res) => {
     });
 });
 
+// Analytics dashboard for data-driven decision support
+router.get("/analytics", isAdmin, (req, res) => {
+    // Query 1: Track participant turnout per event (no date restriction)
+    const turnoutSql = `
+        SELECT 
+            e.EventID,
+            e.EventName,
+            e.EventDate,
+            COALESCE(p.registrationCount, 0) AS registrationCount,
+            COALESCE(p.attendanceCount, 0) AS attendanceCount,
+            CASE 
+                WHEN COALESCE(p.registrationCount, 0) > 0 THEN 
+                    ROUND((COALESCE(p.attendanceCount, 0) * 100.0 / p.registrationCount), 2)
+                ELSE 0 
+            END AS attendancePercentage
+        FROM event e
+        LEFT JOIN (
+            SELECT 
+                EventID,
+                COUNT(*) AS registrationCount,
+                COUNT(CASE WHEN AttendanceStatus = 'Present' THEN 1 END) AS attendanceCount
+            FROM participant
+            GROUP BY EventID
+        ) p ON e.EventID = p.EventID
+        ORDER BY e.EventDate DESC
+        LIMIT 10
+    `;
+    
+    // Query 2: Budget allocation vs expenditures
+    const budgetSql = `
+        SELECT 
+            e.EventID,
+            e.EventName,
+            COALESCE(b.totalBudget, 0) AS totalBudget,
+            COALESCE(ex.totalExpenditure, 0) AS totalExpenditure,
+            (COALESCE(b.totalBudget, 0) - COALESCE(ex.totalExpenditure, 0)) AS remainingBudget,
+            CASE 
+                WHEN COALESCE(b.totalBudget, 0) > 0 THEN 
+                    ROUND((COALESCE(ex.totalExpenditure, 0) * 100.0 / b.totalBudget), 2)
+                ELSE 0 
+            END AS budgetUtilizationPercent
+        FROM event e
+        LEFT JOIN (
+            SELECT EventID, SUM(AllocatedAmount) AS totalBudget
+            FROM budget
+            GROUP BY EventID
+        ) b ON e.EventID = b.EventID
+        LEFT JOIN (
+            SELECT EventID, SUM(Amount) AS totalExpenditure
+            FROM expenditure
+            GROUP BY EventID
+        ) ex ON e.EventID = ex.EventID
+        ORDER BY e.EventDate DESC
+        LIMIT 10
+    `;
+    
+    // Query 3: Overall summary statistics (no date restriction)
+    const totalEventsSql = "SELECT COUNT(*) as totalEvents FROM event";
+    const totalRegistrationsSql = "SELECT COUNT(*) as totalRegistrations FROM participant";
+    const totalAttendeesSql = "SELECT COUNT(*) as totalAttendees FROM participant WHERE AttendanceStatus = 'Present'";
+    const totalIncomeSql = "SELECT COALESCE(SUM(Amount), 0) as totalIncome FROM income";
+    const totalExpenditureSql = "SELECT COALESCE(SUM(Amount), 0) as totalExpenditure FROM expenditure";
+    
+    // Query 4: Event participation trends (no date restriction)
+    const trendSql = `
+        SELECT 
+            e.EventID,
+            e.EventName,
+            e.EventDate,
+            e.Venue,
+            COALESCE(p.registrationCount, 0) AS registrationCount,
+            COALESCE(p.attendanceCount, 0) AS attendanceCount
+        FROM event e
+        LEFT JOIN (
+            SELECT 
+                EventID,
+                COUNT(*) AS registrationCount,
+                COUNT(CASE WHEN AttendanceStatus = 'Present' THEN 1 END) AS attendanceCount
+            FROM participant
+            GROUP BY EventID
+        ) p ON e.EventID = p.EventID
+        ORDER BY e.EventDate DESC
+    `;
+    
+    // Execute queries sequentially to avoid nested callback issues
+    db.query(totalEventsSql, (err, totalEventsResult) => {
+        if (err) {
+            console.error('Total events query error:', err);
+            return res.status(500).send("Database error");
+        }
+        
+        db.query(totalRegistrationsSql, (err, totalRegistrationsResult) => {
+            if (err) {
+                console.error('Total registrations query error:', err);
+                return res.status(500).send("Database error");
+            }
+            
+            db.query(totalAttendeesSql, (err, totalAttendeesResult) => {
+                if (err) {
+                    console.error('Total attendees query error:', err);
+                    return res.status(500).send("Database error");
+                }
+                
+                db.query(totalIncomeSql, (err, totalIncomeResult) => {
+                    if (err) {
+                        console.error('Total income query error:', err);
+                        return res.status(500).send("Database error");
+                    }
+                    
+                    db.query(totalExpenditureSql, (err, totalExpenditureResult) => {
+                        if (err) {
+                            console.error('Total expenditure query error:', err);
+                            return res.status(500).send("Database error");
+                        }
+                        
+                        db.query(turnoutSql, (err, turnoutResults) => {
+                            if (err) {
+                                console.error('Turnout query error:', err);
+                                return res.status(500).send("Database error");
+                            }
+                            
+                            db.query(budgetSql, (err, budgetResults) => {
+                                if (err) {
+                                    console.error('Budget query error:', err);
+                                    return res.status(500).send("Database error");
+                                }
+                                
+                                db.query(trendSql, (err, trendResults) => {
+                                    if (err) {
+                                        console.error('Trend query error:', err);
+                                        return res.status(500).send("Database error");
+                                    }
+                                    
+                                    // Calculate net profit
+                                    const netProfit = parseFloat(totalIncomeResult[0].totalIncome || 0) - parseFloat(totalExpenditureResult[0].totalExpenditure || 0);
+                                    
+                                    // Combine all summary data
+                                    const summary = {
+                                        totalEvents: totalEventsResult[0].totalEvents || 0,
+                                        totalRegistrations: totalRegistrationsResult[0].totalRegistrations || 0,
+                                        totalAttendees: totalAttendeesResult[0].totalAttendees || 0,
+                                        totalIncome: totalIncomeResult[0].totalIncome || 0,
+                                        totalExpenditure: totalExpenditureResult[0].totalExpenditure || 0,
+                                        netProfit: netProfit
+                                    };
+                                    
+                                    res.render("admin/analytics", { 
+                                        summary: summary,
+                                        turnoutData: turnoutResults,
+                                        budgetData: budgetResults,
+                                        trendData: trendResults,
+                                        user: req.session.user 
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
 // Export both router and middleware correctly
 module.exports = {
     router,

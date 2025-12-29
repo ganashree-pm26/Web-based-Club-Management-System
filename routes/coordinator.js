@@ -202,7 +202,7 @@ router.get("/events/:eventId/budget", isCoordinator, (req, res) => {
     `;
     db.query(sql, [eventId], (err, budgets) => {
       if (err) return res.status(500).send("DB error");
-      db.query("SELECT * FROM expenditure WHERE EventID = ?", [eventId], (err2, expenditures) => {
+      db.query("SELECT * FROM expenditure WHERE EventID = ? ORDER BY ExpenseDate DESC", [eventId], (err2, expenditures) => {
         if (err2) return res.status(500).send("DB error");
         db.query("SELECT EventID, EventName FROM event WHERE EventID = ?", [eventId], (err3, eventRows) => {
           if (err3) return res.status(500).send("DB error");
@@ -213,6 +213,40 @@ router.get("/events/:eventId/budget", isCoordinator, (req, res) => {
             user: req.session.user 
           });
         });
+      });
+    });
+  });
+});
+
+// Add expenditure for an event
+router.post("/events/:eventId/expenditure/create", isCoordinator, (req, res) => {
+  const eventId = req.params.eventId;
+  
+  checkEventAccess(req, eventId, (hasAccess) => {
+    if (!hasAccess) return res.status(403).send("Access denied");
+    
+    const { category, amount, date, description } = req.body;
+    
+    // Validate inputs
+    if (!category || !amount || !date) {
+      return res.status(400).send("Category, amount, and date are required");
+    }
+    
+    // Check if the category exists in the budget
+    const checkCategorySql = "SELECT * FROM budget WHERE EventID = ? AND Category = ?";
+    db.query(checkCategorySql, [eventId, category], (err, budgetRows) => {
+      if (err) return res.status(500).send("DB error");
+      if (budgetRows.length === 0) {
+        return res.status(400).send("Invalid category for this event");
+      }
+      
+      // Insert the expenditure
+      const insertSql = `INSERT INTO expenditure (EventID, Category, Amount, ExpenseDate, Description) 
+                       VALUES (?, ?, ?, ?, ?)`;
+      
+      db.query(insertSql, [eventId, category, amount, date, description || ''], (err) => {
+        if (err) return res.status(500).send("Insert error: " + err.message);
+        res.redirect(`/coordinator/events/${eventId}/budget`);
       });
     });
   });

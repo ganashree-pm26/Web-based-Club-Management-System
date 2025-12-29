@@ -346,11 +346,19 @@ function identifyImprovementSuggestions(comments) {
         const improvementKeywords = ['should', 'could', 'need', 'better', 'more', 'improve', 'enhance',
                                    'add', 'change', 'different', 'alternative', 'next time'];
         
+        // Check if comment has improvement keywords
         const hasImprovementKeyword = tokens.some(token => 
             improvementKeywords.some(keyword => token.includes(keyword))
         );
         
-        if (hasImprovementKeyword) {
+        // Check if comment has negative sentiment (for implicit improvement suggestions)
+        const negativeKeywords = ['bad', 'poor', 'terrible', 'awful', 'worst', 'hate', 'dislike', 'disappoint', 'not good', 'unsatisfactory', 'lack', 'missing', 'insufficient', 'inadequate'];
+        const hasNegativeKeyword = tokens.some(token => 
+            negativeKeywords.some(keyword => token.includes(keyword))
+        );
+        
+        // If comment has improvement keywords or negative sentiment, look for suggestion categories
+        if (hasImprovementKeyword || hasNegativeKeyword) {
             // Check for each category
             for (const [category, keywords] of Object.entries(suggestionCategories)) {
                 let suggestionCount = 0;
@@ -375,6 +383,55 @@ function identifyImprovementSuggestions(comments) {
             }
         }
     });
+    
+    // If no suggestions were found from explicit keywords, create them based on common issues
+    if (Object.keys(suggestions).length === 0 && comments.length > 0) {
+        // Create improvement suggestions based on the issue categories
+        const issueCategories = {
+            'Venue/Location': ['venue', 'location', 'place', 'space', 'area', 'room', 'hall'],
+            'Organization': ['organiz', 'arrang', 'planning', 'schedule', 'timing', 'management'],
+            'Facilities': ['facility', 'toilet', 'parking', 'seating', 'ac', 'lighting', 'comfort'],
+            'Crowd Management': ['crowd', 'queue', 'waiting', 'line', 'space', 'overcrowd']
+        };
+        
+        // Check if any issue keywords appear in comments
+        for (const [issue, keywords] of Object.entries(issueCategories)) {
+            let issueCount = 0;
+            
+            for (const comment of comments) {
+                const tokenizer = new natural.WordTokenizer();
+                const tokens = tokenizer.tokenize(comment.toLowerCase());
+                const stemmedTokens = tokens.map(token => PorterStemmer.stem(token));
+                
+                // Check stemmed tokens
+                for (const token of stemmedTokens) {
+                    if (keywords.some(keyword => token.includes(PorterStemmer.stem(keyword)))) {
+                        issueCount++;
+                    }
+                }
+                
+                // Also check original comment for phrases
+                for (const keyword of keywords) {
+                    if (comment.includes(keyword)) {
+                        issueCount++;
+                    }
+                }
+            }
+            
+            if (issueCount > 0) {
+                // Create an improvement suggestion based on the issue
+                const improvementMap = {
+                    'Venue/Location': 'Better Venue/Location',
+                    'Organization': 'Better Organization',
+                    'Facilities': 'Enhanced Facilities',
+                    'Crowd Management': 'Better Crowd Control'
+                };
+                
+                const improvementSuggestion = improvementMap[issue] || `Improved ${issue.replace(/\//g, '/')}`;
+                suggestions[improvementSuggestion] = issueCount;
+            }
+        }
+    }
     
     // Sort by frequency and return top 5
     return Object.entries(suggestions)
@@ -430,22 +487,21 @@ function performSentimentAnalysis(feedbackDocs) {
 // Helper function to extract top keywords
 function extractTopKeywords(comments) {
     // Combine all comments and tokenize
-    const allTokens = [];
+    const allOriginalTokens = [];
     
     comments.forEach(comment => {
-        // Tokenize and stem the comment
+        // Tokenize the comment (keeping original tokens for display)
         const tokenizer = new natural.WordTokenizer();
         const tokens = tokenizer.tokenize(comment.toLowerCase());
-        const stemmedTokens = tokens.map(token => PorterStemmer.stem(token));
         
-        // Add tokens to allTokens array
-        allTokens.push(...stemmedTokens);
+        // Add original tokens to array
+        allOriginalTokens.push(...tokens);
     });
     
     // Remove common stop words and filter out short words
     const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them'];
     
-    const filteredTokens = allTokens.filter(token => 
+    const filteredTokens = allOriginalTokens.filter(token => 
         token.length > 3 && 
         !stopWords.includes(token) && 
         !/^[0-9]+$/.test(token) // Remove numbers

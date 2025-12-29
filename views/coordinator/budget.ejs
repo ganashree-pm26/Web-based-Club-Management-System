@@ -52,6 +52,39 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header bg-success text-white">
+                        <h5>Add New Expenditure</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/coordinator/events/<%= event.EventID %>/expenditure/create">
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <select class="form-control" name="category" required>
+                                    <% budgets.forEach(b => { %>
+                                        <option value="<%= b.Category %>"><%= b.Category %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Amount</label>
+                                <input type="number" step="0.01" class="form-control" name="amount" placeholder="0.00" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Date</label>
+                                <input type="date" class="form-control" name="date" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="description" rows="2" placeholder="Enter description"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Add Expenditure</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
                         <h5>Recent Expenditures</h5>
                     </div>
                     <div class="card-body">
