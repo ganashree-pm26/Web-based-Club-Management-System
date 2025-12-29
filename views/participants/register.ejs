@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Participant Registration</title>
+</head>
+<body>
+    <h1>Register for Event</h1>
+
+    <form action="/participants/register" method="POST">
+        <label>Name:</label>
+        <input type="text" name="name" required><br><br>
+
+        <label>Email:</label>
+        <input type="email" name="email"><br><br>
+
+        <label>Phone:</label>
+        <input type="text" name="phone"><br><br>
+
+        <label>Event:</label>
+        <select name="eventId" required>
+            <% events.forEach(event => { %>
+                <option value="<%= event.EventID %>" <%= (preSelectedEventId && preSelectedEventId == event.EventID) ? 'selected' : '' %>><%= event.EventName %></option>
+            <% }) %>
+        </select><br><br>
+
+        <label>Team ID:</label>
+        <input type="text" name="teamId"><br><br>
+
+        <label>Team Name:</label>
+        <input type="text" name="teamName"><br><br>
+
+        <label>Pay Status:</label>
+        <select name="payStatus">
+            <option value="unpaid">Unpaid</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+        </select><br><br>
+
+        <label>Amount Paid:</label>
+        <input type="number" step="0.01" name="amountPaid" value="0"><br><br>
+
+        <label>Registration Date:</label>
+        <input type="date" name="regDate" value="<%= new Date().toISOString().split('T')[0] %>"><br><br>
+
+        <button type="submit">Register</button>
+    </form>
+</body>
+</html>

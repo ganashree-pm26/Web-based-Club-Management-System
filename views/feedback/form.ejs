@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+    <title>Submit Feedback</title>
+</head>
+<body>
+  <h2>Feedback for <%= participant.EventName %></h2>
+
+  <!-- FIXED URL: include eventId & participantId in action -->
+  <form action="/feedback/submit/<%= participant.EventID %>/<%= participant.ParticipantID %>" method="POST">
+
+    <label>Rating (1-5):</label>
+    <input name="rating" type="number" min="1" max="5" required><br>
+
+    <label>Comment:</label><br>
+    <textarea name="comments" rows="5" cols="50" required></textarea><br>
+
+    <button type="submit">Submit Feedback</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <title>Participants</title>
+  <style>
+    form.inline { display: inline-block; margin: 0; }
+    table { border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h1>All Participants</h1>
+
+  <form method="get" action="/participants/list" style="margin-bottom: 12px;">
+    <label>Event:</label>
+    <select name="eventId">
+      <option value="">All</option>
+      <% events.forEach(e => { %>
+        <option value="<%= e.EventID %>" <%= (req.query.eventId == e.EventID) ? 'selected' : '' %>><%= e.EventName %></option>
+      <% }) %>
+    </select>
+    <label>Team ID:</label>
+    <input type="text" name="teamId" value="<%= req.query.teamId || '' %>">
+    <label>Pay Status:</label>
+    <select name="payStatus">
+      <option value="">All</option>
+      <option value="unpaid" <%= req.query.payStatus==='unpaid'?'selected':'' %>>Unpaid</option>
+      <option value="pending" <%= req.query.payStatus==='pending'?'selected':'' %>>Pending</option>
+      <option value="paid" <%= req.query.payStatus==='paid'?'selected':'' %>>Paid</option>
+    </select>
+    <label>Attendance:</label>
+    <select name="attendanceStatus">
+      <option value="">All</option>
+      <option value="pending" <%= req.query.attendanceStatus==='pending'?'selected':'' %>>Pending</option>
+      <option value="present" <%= req.query.attendanceStatus==='present'?'selected':'' %>>Present</option>
+      <option value="absent" <%= req.query.attendanceStatus==='absent'?'selected':'' %>>Absent</option>
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <table>
+    <thead><tr>
+      <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Event</th><th>Team</th>
+      <th>Pay Status</th><th>Amount Paid</th><th>Reg Date</th><th>Attendance</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+      <% participants.forEach(p => { %>
+        <tr>
+          <td><%= p.ParticipantID %></td>
+          <td><%= p.ParticipantName %></td>
+          <td><%= p.Email || "-" %></td>
+          <td><%= p.Phone || "-" %></td>
+          <td><%= p.EventName %> (ID:<%= p.EventID %>)</td>
+          <td><%= p.TeamName ? p.TeamName + ' ('+p.TeamID+')' : '-' %></td>
+          <td><%= p.PayStatus || '-' %></td>
+          <td><%= p.AmountPaid || 0 %></td>
+          <td><%= p.RegDate ? new Date(p.RegDate).toISOString().split('T')[0] : '-' %></td>
+          <td><%= p.AttendanceStatus || 'pending' %></td>
+          <td>
+            <a href="/participants/edit/<%= p.ParticipantID %>">Edit</a> |
+            <a href="/participants/delete/<%= p.ParticipantID %>" onclick="return confirm('Delete this participant?')">Delete</a>
+            <form class="inline" method="POST" action="/participants/<%= p.ParticipantID %>/attendance">
+              <select name="attendanceStatus">
+                <option value="pending" <%= p.AttendanceStatus==='pending'?'selected':'' %>>Pending</option>
+                <option value="present" <%= p.AttendanceStatus==='present'?'selected':'' %>>Present</option>
+                <option value="absent" <%= p.AttendanceStatus==='absent'?'selected':'' %>>Absent</option>
+              </select>
+              <button type="submit">Save</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <p><a href="/participants/register">Register new participant</a></p>
+</body>
+</html>

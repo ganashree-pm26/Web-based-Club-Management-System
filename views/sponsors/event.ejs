@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head><title>Event Finance</title></head>
+<body>
+  <h1>Finance for Event ID: <%= eventId %></h1>
+
+  <h2>Sponsors</h2>
+  <ul>
+    <% sponsors.forEach(s => { %>
+      <li><%= s.SponsorName %> — ₹<%= s.Contribution %></li>
+    <% }) %>
+  </ul>
+
+  <h2>Budgets (Allocated vs Spent)</h2>
+  <table border="1">
+    <thead><tr><th>Category</th><th>Allocated</th><th>Spent</th><th>Remaining</th></tr></thead>
+    <tbody>
+      <% budgets.forEach(b => { %>
+        <tr>
+          <td><%= b.Category %></td>
+          <td><%= b.AllocatedAmount %></td>
+          <td><%= b.Spent %></td>
+          <td><%= (b.AllocatedAmount - b.Spent).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <h2>Expenditures</h2>
+  <table border="1">
+    <thead><tr><th>ExpenseID</th><th>Category</th><th>Amount</th><th>Date</th><th>Description</th></tr></thead>
+    <tbody>
+      <% expenditures.forEach(e => { %>
+        <tr>
+          <td><%= e.ExpenseID %></td>
+          <td><%= e.Category %></td>
+          <td><%= e.Amount %></td>
+          <td><%= e.ExpenseDate ? e.ExpenseDate.toISOString().slice(0,10) : '' %></td>
+          <td><%= e.Description %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Participant Sign Up</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .event-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .event-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            border-color: #0d6efd;
+        }
+        .event-card.selected {
+            border: 2px solid #0d6efd;
+            background-color: #f0f7ff;
+        }
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 mb-3">Participant Registration</h1>
+            <p class="lead">Register for events and get your login credentials</p>
+            <a href="/login" class="btn btn-light">Already have an account? Login</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <% if(error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+
+        <div class="row">
+            <!-- Available Events -->
+            <div class="col-md-6">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">Available Events</h3>
+                    <div class="btn-group" role="group">
+                        <a href="/participants/signup?filter=all" 
+                           class="btn btn-sm <%= currentFilter === 'all' ? 'btn-primary' : 'btn-outline-primary' %>">
+                            All
+                        </a>
+                        <a href="/participants/signup?filter=upcoming" 
+                           class="btn btn-sm <%= currentFilter === 'upcoming' ? 'btn-primary' : 'btn-outline-primary' %>">
+                            Upcoming
+                        </a>
+                        <a href="/participants/signup?filter=past" 
+                           class="btn btn-sm <%= currentFilter === 'past' ? 'btn-primary' : 'btn-outline-primary' %>">
+                            Past
+                        </a>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()" title="Refresh">
+                        🔄
+                    </button>
+                </div>
+                <% if(events.length === 0) { %>
+                    <div class="alert alert-info">
+                        No events available at the moment. 
+                        <a href="/participants/signup?filter=all" class="alert-link">Show all events</a>
+                    </div>
+                <% } else { %>
+                    <% events.forEach(event => { %>
+                        <div class="event-card" 
+                             data-event-id="<%= event.EventID %>" 
+                             data-event-name="<%= event.EventName.replace(/'/g, "&#39;") %>">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="mb-0"><%= event.EventName %></h5>
+                                <span class="badge <%= event.eventStatus === 'upcoming' ? 'bg-success' : 'bg-secondary' %>">
+                                    <%= event.eventStatus === 'upcoming' ? 'Upcoming' : 'Past' %>
+                                </span>
+                            </div>
+                            <p class="text-muted mb-2">
+                                <strong>Date:</strong> <%= new Date(event.EventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %><br>
+                            <strong>Venue:</strong> <%= event.Venue %><br>
+                            <strong>Registered:</strong> <%= event.registeredCount || 0 %> participants
+                            </p>
+                        </div>
+                    <% }) %>
+                <% } %>
+            </div>
+
+            <!-- Registration Form -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">Registration Form</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/participants/signup" id="signupForm">
+                            <input type="hidden" name="eventId" id="selectedEventId" required>
+
+                            <div class="mb-3">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Email Address *</label>
+                                <input type="email" name="email" class="form-control" required>
+                                <small class="text-muted">This will be used for your login</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="text" name="phone" class="form-control">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Selected Event *</label>
+                                <input type="text" id="selectedEventName" class="form-control" readonly placeholder="Click on an event card below to select">
+                                <small class="text-muted">Or select from dropdown:</small>
+                                <select class="form-select mt-2" id="eventSelectDropdown" onchange="selectEventFromDropdown()">
+                                    <option value="">-- Select an Event --</option>
+                                    <% events.forEach(event => { %>
+                                        <option value="<%= event.EventID %>" data-name="<%= event.EventName %>"><%= event.EventName %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Team ID (Optional)</label>
+                                    <input type="text" name="teamId" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Team Name (Optional)</label>
+                                    <input type="text" name="teamName" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Payment Amount (₹) *</label>
+                                <input type="number" step="0.01" name="amountPaid" class="form-control" value="500" required>
+                                <small class="text-muted">Enter the amount you are paying</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Create Password *</label>
+                                <input type="password" name="password" class="form-control" required minlength="6">
+                                <small class="text-muted">Minimum 6 characters</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Confirm Password *</label>
+                                <input type="password" name="confirmPassword" class="form-control" required>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <small>After registration, you will receive your login credentials (username and password).</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100" id="submitBtn" disabled>Register & Get Login Credentials</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedEventId = null;
+        let selectedEventName = null;
+
+        function selectEvent(eventId, eventName) {
+            selectedEventId = eventId;
+            selectedEventName = eventName;
+            
+            // Update form
+            document.getElementById('selectedEventId').value = eventId;
+            document.getElementById('selectedEventName').value = eventName;
+            document.getElementById('submitBtn').disabled = false;
+            
+            // Update dropdown
+            document.getElementById('eventSelectDropdown').value = eventId;
+            
+            // Update UI
+            document.querySelectorAll('.event-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            const selectedCard = document.querySelector(`[data-event-id="${eventId}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+        }
+
+        function selectEventFromDropdown() {
+            const dropdown = document.getElementById('eventSelectDropdown');
+            const selectedOption = dropdown.options[dropdown.selectedIndex];
+            if (selectedOption.value) {
+                const eventId = parseInt(selectedOption.value);
+                const eventName = selectedOption.getAttribute('data-name') || selectedOption.text;
+                selectEvent(eventId, eventName);
+            }
+        }
+
+        // Add click event listeners to event cards
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.event-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const eventId = parseInt(this.getAttribute('data-event-id'));
+                    const eventName = this.getAttribute('data-event-name');
+                    selectEvent(eventId, eventName);
+                });
+            });
+            
+            // Auto-refresh events every 30 seconds for real-time updates
+            setInterval(function() {
+                // Only refresh if no form is being filled
+                if (!document.querySelector('input[name="name"]').value) {
+                    fetch(window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'refresh=1')
+                        .then(() => {
+                            // Silently refresh the page to get latest events
+                            // Only refresh if user hasn't selected an event yet
+                            if (!selectedEventId) {
+                                location.reload();
+                            }
+                        })
+                        .catch(() => {
+                            // Ignore errors
+                        });
+                }
+            }, 30000); // Refresh every 30 seconds
+        });
+
+        // Password confirmation validation
+        document.getElementById('signupForm').addEventListener('submit', function(e) {
+            const password = document.querySelector('input[name="password"]').value;
+            const confirmPassword = document.querySelector('input[name="confirmPassword"]').value;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                return false;
+            }
+            
+            if (!selectedEventId) {
+                e.preventDefault();
+                alert('Please select an event first!');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>
+

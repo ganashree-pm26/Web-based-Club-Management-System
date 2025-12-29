@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Budget Allocation - <%= event.EventName %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">Budget Allocation - <%= event.EventName %></span>
+            <div>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm me-2">← Dashboard</a>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Budget Allocation for <%= event.EventName %></h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBudgetModal">+ Allocate Budget</button>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>Total Allocated: ₹<%= budgets.reduce((sum, b) => sum + parseFloat(b.AllocatedAmount || 0), 0).toLocaleString() %></h5>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Allocated Amount</th>
+                            <th>Approved By</th>
+                            <th>Approval Date</th>
+                            <th>Explanation</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% budgets.forEach(budget => { %>
+                            <tr>
+                                <td><strong><%= budget.Category %></strong></td>
+                                <td>₹<%= parseFloat(budget.AllocatedAmount).toLocaleString() %></td>
+                                <td><%= budget.ApprovedBy || '-' %></td>
+                                <td><%= budget.ApprovalDate ? new Date(budget.ApprovalDate).toLocaleDateString() : '-' %></td>
+                                <td><%= budget.BudgetExplanation || '-' %></td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" 
+                                            onclick="editBudget(<%= budget.BudgetID %>, '<%= budget.Category %>', <%= budget.AllocatedAmount %>, '<%= (budget.BudgetExplanation || '').replace(/'/g, "\\'") %>')">
+                                        Edit
+                                    </button>
+                                    <a href="/admin/events/<%= event.EventID %>/budget/<%= budget.BudgetID %>/delete" 
+                                       class="btn btn-sm btn-danger" 
+                                       onclick="return confirm('Delete this budget allocation?')">
+                                        Delete
+                                    </a>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Budget Modal -->
+    <div class="modal fade" id="createBudgetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Allocate Budget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/admin/events/<%= event.EventID %>/budget/create">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Category *</label>
+                            <input type="text" name="category" class="form-control" placeholder="e.g., Logistics, Prizes, Promotion" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Allocated Amount (₹) *</label>
+                            <input type="number" step="0.01" name="allocatedAmount" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Budget Explanation</label>
+                            <textarea name="budgetExplanation" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Allocate Budget</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Budget Modal -->
+    <div class="modal fade" id="editBudgetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Budget Allocation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/admin/events/<%= event.EventID %>/budget/EDIT_BUDGET_ID/update" id="editBudgetForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Category *</label>
+                            <input type="text" name="category" id="editCategory" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Allocated Amount (₹) *</label>
+                            <input type="number" step="0.01" name="allocatedAmount" id="editAmount" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Budget Explanation</label>
+                            <textarea name="budgetExplanation" id="editExplanation" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Budget</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function editBudget(id, category, amount, explanation) {
+            document.getElementById('editBudgetForm').action = `/admin/events/<%= event.EventID %>/budget/${id}/update`;
+            document.getElementById('editCategory').value = category;
+            document.getElementById('editAmount').value = amount;
+            document.getElementById('editExplanation').value = explanation || '';
+            new bootstrap.Modal(document.getElementById('editBudgetModal')).show();
+        }
+    </script>
+</body>
+</html>
+

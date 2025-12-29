@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Participants - <%= event.EventName %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">Manage Participants - <%= event.EventName %></span>
+            <a href="/coordinator/dashboard" class="btn btn-outline-light btn-sm">← Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Participants for <%= event.EventName %></h2>
+            <a href="/participants/register?eventId=<%= event.EventID %>" class="btn btn-primary">+ Add Participant</a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Team</th>
+                            <th>Pay Status</th>
+                            <th>Amount</th>
+                            <th>Attendance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% participants.forEach(p => { %>
+                            <tr>
+                                <td><%= p.ParticipantID %></td>
+                                <td><%= p.ParticipantName %></td>
+                                <td><%= p.Email || "-" %></td>
+                                <td><%= p.Phone || "-" %></td>
+                                <td><%= p.TeamName ? p.TeamName + ' (' + p.TeamID + ')' : '-' %></td>
+                                <td>
+                                    <span class="badge <%= p.PayStatus === 'paid' ? 'bg-success' : p.PayStatus === 'pending' ? 'bg-warning' : 'bg-danger' %>">
+                                        <%= p.PayStatus || 'unpaid' %>
+                                    </span>
+                                </td>
+                                <td>₹<%= p.AmountPaid || 0 %></td>
+                                <td>
+                                    <form method="POST" action="/participants/<%= p.ParticipantID %>/attendance" class="d-inline">
+                                        <select name="attendanceStatus" class="form-select form-select-sm" onchange="this.form.submit()">
+                                            <option value="pending" <%= p.AttendanceStatus === 'pending' ? 'selected' : '' %>>Pending</option>
+                                            <option value="present" <%= p.AttendanceStatus === 'present' ? 'selected' : '' %>>Present</option>
+                                            <option value="absent" <%= p.AttendanceStatus === 'absent' ? 'selected' : '' %>>Absent</option>
+                                        </select>
+                                    </form>
+                                </td>
+                                <td>
+                                    <a href="/participants/edit/<%= p.ParticipantID %>" class="btn btn-sm btn-warning">Edit</a>
+                                    <a href="/participants/delete/<%= p.ParticipantID %>" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">Delete</a>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

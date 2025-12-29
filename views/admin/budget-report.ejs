@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Budget Utilization Report - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .report-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .utilization-bar {
+            height: 30px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">Budget Utilization Report</span>
+            <div>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm me-2">← Dashboard</a>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mb-4">Complete Budget Utilization Report</h2>
+
+        <% events.forEach(event => { 
+            const utilization = event.totalBudget > 0 ? (event.totalSpent / event.totalBudget * 100) : 0;
+            const remaining = event.totalBudget - event.totalSpent;
+            const categories = categoriesByEvent[event.EventID] || [];
+        %>
+            <div class="report-card">
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <h4><%= event.EventName %></h4>
+                        <p class="text-muted">
+                            <strong>Date:</strong> <%= new Date(event.EventDate).toLocaleDateString() %>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h5 class="mb-0">Utilization</h5>
+                                <h3 class="mb-0 <%= utilization > 100 ? 'text-danger' : utilization > 80 ? 'text-warning' : 'text-success' %>">
+                                    <%= utilization.toFixed(1) %>%
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <small class="text-muted">Total Budget</small>
+                                <h4>₹<%= parseFloat(event.totalBudget).toLocaleString() %></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <small class="text-muted">Total Spent</small>
+                                <h4>₹<%= parseFloat(event.totalSpent).toLocaleString() %></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <small class="text-muted">Remaining</small>
+                                <h4 class="<%= remaining < 0 ? 'text-danger' : 'text-success' %>">
+                                    ₹<%= remaining.toLocaleString() %>
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted">Overall Utilization</small>
+                    <div class="progress utilization-bar">
+                        <div class="progress-bar <%= utilization > 100 ? 'bg-danger' : utilization > 80 ? 'bg-warning' : 'bg-success' %>" 
+                             role="progressbar" 
+                             style="width: <%= Math.min(utilization, 100) %>%">
+                            <%= utilization.toFixed(1) %>%
+                        </div>
+                    </div>
+                </div>
+
+                <% if(categories.length > 0) { %>
+                    <h5 class="mt-4 mb-3">Category-wise Breakdown</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Allocated</th>
+                                    <th>Spent</th>
+                                    <th>Remaining</th>
+                                    <th>Utilization</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% categories.forEach(cat => { 
+                                    const catUtil = cat.AllocatedAmount > 0 ? (cat.Spent / cat.AllocatedAmount * 100) : 0;
+                                %>
+                                    <tr>
+                                        <td><strong><%= cat.Category %></strong></td>
+                                        <td>₹<%= parseFloat(cat.AllocatedAmount).toLocaleString() %></td>
+                                        <td>₹<%= parseFloat(cat.Spent).toLocaleString() %></td>
+                                        <td class="<%= cat.Remaining < 0 ? 'text-danger' : '' %>">
+                                            ₹<%= parseFloat(cat.Remaining).toLocaleString() %>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar <%= catUtil > 100 ? 'bg-danger' : catUtil > 80 ? 'bg-warning' : 'bg-success' %>" 
+                                                     style="width: <%= Math.min(catUtil, 100) %>%">
+                                                    <%= catUtil.toFixed(1) %>%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } %>
+            </div>
+        <% }) %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

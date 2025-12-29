@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head><title>Edit Participant</title></head>
+<body>
+  <h1>Edit Participant</h1>
+  <form method="POST" action="/participants/edit/<%= participant.ParticipantID %>">
+    <label>Name:</label>
+    <input type="text" name="name" value="<%= participant.ParticipantName %>" required><br><br>
+
+    <label>Email:</label>
+    <input type="email" name="email" value="<%= participant.Email || '' %>"><br><br>
+
+    <label>Phone:</label>
+    <input type="text" name="phone" value="<%= participant.Phone || '' %>"><br><br>
+
+    <label>Event:</label>
+    <select name="eventId">
+      <% events.forEach(e => { %>
+        <option value="<%= e.EventID %>" <%= e.EventID === participant.EventID ? 'selected' : '' %>><%= e.EventName %></option>
+      <% }) %>
+    </select><br><br>
+
+    <label>Team ID:</label>
+    <input type="text" name="teamId" value="<%= participant.TeamID || '' %>"><br><br>
+
+    <label>Team Name:</label>
+    <input type="text" name="teamName" value="<%= participant.TeamName || '' %>"><br><br>
+
+    <label>Pay Status:</label>
+    <select name="payStatus">
+      <option value="unpaid" <%= participant.PayStatus==='unpaid'?'selected':'' %>>Unpaid</option>
+      <option value="pending" <%= participant.PayStatus==='pending'?'selected':'' %>>Pending</option>
+      <option value="paid" <%= participant.PayStatus==='paid'?'selected':'' %>>Paid</option>
+    </select><br><br>
+
+    <label>Amount Paid:</label>
+    <input type="number" step="0.01" name="amountPaid" value="<%= participant.AmountPaid || 0 %>"><br><br>
+
+    <label>Registration Date:</label>
+    <input type="date" name="regDate" value="<%= participant.RegDate ? new Date(participant.RegDate).toISOString().split('T')[0] : '' %>"><br><br>
+
+    <label>Attendance:</label>
+    <select name="attendanceStatus">
+      <option value="pending" <%= participant.AttendanceStatus==='pending'?'selected':'' %>>Pending</option>
+      <option value="present" <%= participant.AttendanceStatus==='present'?'selected':'' %>>Present</option>
+      <option value="absent" <%= participant.AttendanceStatus==='absent'?'selected':'' %>>Absent</option>
+    </select><br><br>
+
+    <button type="submit">Save</button>
+  </form>
+</body>
+</html>
+
+

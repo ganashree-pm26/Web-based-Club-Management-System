@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Income Management - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">Income Management</span>
+            <div>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm me-2">← Dashboard</a>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>All Income</h2>
+            <a href="/income/create" class="btn btn-primary">+ Add Income</a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Event</th>
+                            <th>Source</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% income.forEach(inc => { %>
+                            <tr>
+                                <td><%= inc.IncomeID %></td>
+                                <td><%= inc.EventName || 'N/A' %></td>
+                                <td><%= inc.SourceName || 'N/A' %> (<%= inc.SourceType %>)</td>
+                                <td><%= inc.Category %></td>
+                                <td><strong>₹<%= parseFloat(inc.Amount).toLocaleString() %></strong></td>
+                                <td><%= new Date(inc.IncomeDate).toLocaleDateString() %></td>
+                                <td><%= inc.Description || '-' %></td>
+                                <td>
+                                    <a href="/income/edit/<%= inc.IncomeID %>" class="btn btn-sm btn-warning me-2">Edit</a>
+                                    <a href="/income/delete/<%= inc.IncomeID %>" 
+                                       class="btn btn-sm btn-danger" 
+                                       onclick="return confirm('Delete this income record?')">
+                                        Delete
+                                    </a>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

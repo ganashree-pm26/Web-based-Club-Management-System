@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Income - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">Add Income</span>
+            <div>
+                <a href="/income" class="btn btn-outline-light btn-sm me-2">← All Income</a>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm me-2">Dashboard</a>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Add Income</h4>
+                    </div>
+                    <div class="card-body">
+                        <form action="/income/create" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">Event *</label>
+                                <select class="form-select" name="EventID" required>
+                                    <option value="">Select Event</option>
+                                    <% events.forEach(event => { %>
+                                        <option value="<%= event.EventID %>"><%= event.EventName %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Source Type *</label>
+                                <select class="form-select" name="SourceType" id="sourceType" required>
+                                    <option value="">Select Source Type</option>
+                                    <option value="participant">Participant</option>
+                                    <option value="sponsor">Sponsor</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3" id="sourceIdField" style="display: none;">
+                                <label class="form-label">Source ID</label>
+                                <input type="number" class="form-control" name="SourceID" id="sourceId">
+                                <small class="text-muted">Enter Participant ID, Sponsor ID, or other identifier</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Category *</label>
+                                <input type="text" class="form-control" name="Category" placeholder="e.g., Registration Fee, Sponsorship" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Amount *</label>
+                                <input type="number" step="0.01" class="form-control" name="Amount" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Date *</label>
+                                <input type="date" class="form-control" name="IncomeDate" value="<%= new Date().toISOString().split('T')[0] %>" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="Description" rows="3"></textarea>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Add Income</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('sourceType').addEventListener('change', function() {
+            const sourceIdField = document.getElementById('sourceIdField');
+            if (this.value) {
+                sourceIdField.style.display = 'block';
+            } else {
+                sourceIdField.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
