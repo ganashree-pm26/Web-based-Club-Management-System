@@ -23,5 +23,4 @@ db.getConnection((err, connection) => {
     connection.release(); // Release the connection back to the pool
 });
 
-// Export the pool (callback-based to match existing code)
 module.exports = db;

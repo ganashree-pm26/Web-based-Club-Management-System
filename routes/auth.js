@@ -51,7 +51,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Logout route
+
 router.get("/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
