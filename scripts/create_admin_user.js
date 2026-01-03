@@ -8,6 +8,7 @@ const { createUser } = require("../utils/user");
     process.exit(0);
   } catch (e) {
     console.error("Create admin failed:", e);
+    
     process.exit(1);
   }
 })();
