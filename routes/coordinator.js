@@ -87,10 +87,20 @@ router.get("/events/:eventId/tasks", isCoordinator, (req, res) => {
     `;
     db.query(sql, [eventId], (err, tasks) => {
       if (err) return res.status(500).send("DB error");
-      db.query("SELECT * FROM member", (err2, members) => {
-        if (err2) return res.status(500).send("DB error");
-        db.query("SELECT EventID, EventName FROM event WHERE EventID = ?", [eventId], (err3, eventRows) => {
-          if (err3) return res.status(500).send("DB error");
+      // First get the event's ClubID, then get all members of that club
+      db.query("SELECT EventID, EventName, ClubID FROM event WHERE EventID = ?", [eventId], (err3, eventRows) => {
+        if (err3) return res.status(500).send("DB error");
+        if (eventRows.length === 0) return res.status(404).send("Event not found");
+        
+        const clubId = eventRows[0].ClubID;
+        const membersSql = `
+          SELECT m.*
+          FROM member m
+          WHERE m.ClubID = ?
+          ORDER BY m.MemberName
+        `;
+        db.query(membersSql, [clubId], (err2, members) => {
+          if (err2) return res.status(500).send("DB error");
           res.render("coordinator/tasks", { 
             tasks, 
             members, 
