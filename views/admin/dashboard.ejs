@@ -83,6 +83,47 @@
             background: rgba(30, 41, 59, 0.8) !important;
             border-radius: 8px !important;
         }
+        .event-actions {
+            padding-top: 0;
+        }
+        @media (min-width: 768px) {
+            .event-actions {
+                padding-top: calc(1.5rem + 1.5rem + 0.5rem);
+            }
+        }
+        .btn-allocate {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            color: white !important;
+            font-weight: 500;
+        }
+        .btn-allocate:hover {
+            background: linear-gradient(135deg, #3b9dfd 0%, #00d9ed 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+        }
+        .btn-edit {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            border: none;
+            color: #1f2937 !important;
+            font-weight: 500;
+        }
+        .btn-edit:hover {
+            background: linear-gradient(135deg, #f35784 0%, #fdd835 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(250, 112, 154, 0.4);
+        }
+        .btn-delete {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            color: white !important;
+            font-weight: 500;
+        }
+        .btn-delete:hover {
+            background: linear-gradient(135deg, #e17fef 0%, #e84660 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(240, 147, 251, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -173,7 +214,7 @@
                 const progressWidth = Math.min(utilization, 100);
             %>
                 <div class="event-card">
-                    <div class="row">
+                    <div class="row" style="align-items: stretch;">
                         <div class="col-md-8">
                             <h4><%= event.EventName %></h4>
                             <p class="text-muted mb-2">
@@ -220,10 +261,10 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4 text-end">
-                            <a href="/admin/events/<%= event.EventID %>/budget" class="btn btn-primary btn-sm mb-2 w-100">Allocate Budget</a>
-                            <a href="/events/edit/<%= event.EventID %>" class="btn btn-warning btn-sm mb-2 w-100">Edit Event</a>
-                            <a href="/events/delete/<%= event.EventID %>" class="btn btn-danger btn-sm mb-2 w-100" onclick="return confirm('Delete this event?')">Delete Event</a>
+                        <div class="col-md-4 event-actions d-flex flex-column justify-content-start">
+                            <a href="/admin/events/<%= event.EventID %>/budget" class="btn btn-allocate btn-sm w-100 mb-2">Allocate Budget</a>
+                            <a href="/events/edit/<%= event.EventID %>" class="btn btn-edit btn-sm w-100 mb-2">Edit Event</a>
+                            <a href="/events/delete/<%= event.EventID %>" class="btn btn-delete btn-sm w-100" onclick="return confirm('Delete this event?')">Delete Event</a>
                         </div>
                     </div>
                 </div>

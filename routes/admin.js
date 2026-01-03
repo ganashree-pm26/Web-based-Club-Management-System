@@ -433,19 +433,30 @@ router.get("/expenditures", isAdmin, (req, res) => {
 
 // Budget utilization report
 router.get("/reports/budget-utilization", isAdmin, (req, res) => {
+    // Use aggregated subqueries for budgets and expenditures to avoid
+    // duplication when joining multiple budget rows with multiple expenditures.
     const sql = `
-        SELECT 
+        SELECT
             e.EventID,
             e.EventName,
             e.EventDate,
-            COALESCE(SUM(b.AllocatedAmount), 0) AS totalBudget,
-            COALESCE(SUM(ex.Amount), 0) AS totalSpent,
-            COALESCE(SUM(b.AllocatedAmount), 0) - COALESCE(SUM(ex.Amount), 0) AS remaining,
-            (COALESCE(SUM(ex.Amount), 0) / NULLIF(COALESCE(SUM(b.AllocatedAmount), 0), 0) * 100) AS utilizationPercent
+            COALESCE(bsum.totalBudget, 0) AS totalBudget,
+            COALESCE(exsum.totalSpent, 0) AS totalSpent,
+            COALESCE(bsum.totalBudget, 0) - COALESCE(exsum.totalSpent, 0) AS remaining,
+            CASE WHEN COALESCE(bsum.totalBudget, 0) = 0 THEN 0
+                 ELSE (COALESCE(exsum.totalSpent, 0) / bsum.totalBudget * 100)
+            END AS utilizationPercent
         FROM event e
-        LEFT JOIN budget b ON b.EventID = e.EventID
-        LEFT JOIN expenditure ex ON ex.EventID = e.EventID
-        GROUP BY e.EventID, e.EventName, e.EventDate
+        LEFT JOIN (
+            SELECT EventID, SUM(AllocatedAmount) AS totalBudget
+            FROM budget
+            GROUP BY EventID
+        ) bsum ON bsum.EventID = e.EventID
+        LEFT JOIN (
+            SELECT EventID, SUM(Amount) AS totalSpent
+            FROM expenditure
+            GROUP BY EventID
+        ) exsum ON exsum.EventID = e.EventID
         ORDER BY e.EventDate DESC;
     `;
     
@@ -469,18 +480,38 @@ router.get("/reports/budget-utilization", isAdmin, (req, res) => {
         db.query(categorySql, (err2, categories) => {
             if (err2) return res.status(500).send("DB error");
             
-            // Group categories by event
+            // Group categories by event and compute per-event category totals
             const categoriesByEvent = {};
+            const categoryTotalsByEvent = {}; // { eventId: { allocated: X, spent: Y, remaining: Z } }
             categories.forEach(cat => {
                 if (!categoriesByEvent[cat.EventID]) {
                     categoriesByEvent[cat.EventID] = [];
+                    categoryTotalsByEvent[cat.EventID] = { allocated: 0, spent: 0, remaining: 0 };
                 }
                 categoriesByEvent[cat.EventID].push(cat);
+                const a = parseFloat(cat.AllocatedAmount) || 0;
+                const s = parseFloat(cat.Spent) || 0;
+                const r = parseFloat(cat.Remaining) || (a - s);
+                categoryTotalsByEvent[cat.EventID].allocated += a;
+                categoryTotalsByEvent[cat.EventID].spent += s;
+                categoryTotalsByEvent[cat.EventID].remaining += r;
             });
-            
+
+            // Log mismatches between event totals and summed category totals to help debugging
+            events.forEach(ev => {
+                const evtId = ev.EventID;
+                const evtBudget = parseFloat(ev.totalBudget) || 0;
+                const evtSpent = parseFloat(ev.totalSpent) || 0;
+                const catTotals = categoryTotalsByEvent[evtId] || { allocated: 0, spent: 0, remaining: 0 };
+                if (Math.abs(evtBudget - catTotals.allocated) > 0.001 || Math.abs(evtSpent - catTotals.spent) > 0.001) {
+                    console.warn(`Budget mismatch for EventID=${evtId} (${ev.EventName}): event.totalBudget=${evtBudget}, sum(categories.allocated)=${catTotals.allocated}; event.totalSpent=${evtSpent}, sum(categories.spent)=${catTotals.spent}`);
+                }
+            });
+
             res.render("admin/budget-report", { 
                 events, 
                 categoriesByEvent, 
+                categoryTotalsByEvent,
                 user: req.session.user 
             });
         });
