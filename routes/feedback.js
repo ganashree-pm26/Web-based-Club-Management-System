@@ -4,7 +4,7 @@ const connection = require("../config/db");
 const { MongoClient } = require("mongodb");
 
 const mongoUrl = "mongodb://localhost:27017";
-const mongoDBName = "myFeedbackDB";
+const mongoDBName = "club_feedback";
 const mongoCollection = "feedback";
 
 // 1️⃣ GET feedback form

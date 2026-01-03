@@ -6,7 +6,7 @@ const natural = require("natural");
 const { SentimentAnalyzer, PorterStemmer } = natural;
 
 const mongoUrl = "mongodb://localhost:27017";
-const mongoDBName = "myFeedbackDB";
+const mongoDBName = "club_feedback";
 const mongoCollection = "feedback";
 
 // Middleware to check if user is coordinator or admin
@@ -164,7 +164,9 @@ router.get("/event/:eventId", isCoordinatorOrAdmin, async (req, res) => {
                     queryConditions.push({ _id: { $in: objectIdKeys } });
                 }
                 if (stringKeys.length > 0) {
-                    queryConditions.push({ _id: { $in: stringKeys } });
+                    // Some feedback entries use a custom `feedbackKey` instead of Mongo ObjectId
+                    // Query by `feedbackKey` when the mapped key is not an ObjectId string
+                    queryConditions.push({ feedbackKey: { $in: stringKeys } });
                 }
                 
                 let feedbackDocs = [];
@@ -206,9 +208,23 @@ router.get("/event/:eventId", isCoordinatorOrAdmin, async (req, res) => {
                     // Perform analysis
                     const analysis = analyzeFeedback(feedbackDocs);
                     
+                    // If no negative feedback, extract positive feedback comments
+                    let positiveFeedbacks = [];
+                    if (analysis.negativeFeedback === 0) {
+                        positiveFeedbacks = feedbackDocs
+                            .filter(fb => parseInt(fb.rating) >= 4)
+                            .map(fb => ({
+                                comment: (fb.comment || fb.comments || '').toString().trim(),
+                                rating: parseInt(fb.rating || 0)
+                            }))
+                            .filter(fb => fb.comment !== '')
+                            .slice(0, 10); // Limit to top 10
+                    }
+                    
                     res.render("coordinator/feedback-analysis-details", { 
                         event, 
                         analysis,
+                        positiveFeedbacks: positiveFeedbacks,
                         user: req.session.user 
                     });
                 });
@@ -246,14 +262,18 @@ function analyzeFeedback(feedbackDocs) {
     const negativeFeedback = feedbackDocs.filter(fb => parseInt(fb.rating) <= 2).length;
     const neutralFeedback = totalFeedback - positiveFeedback - negativeFeedback;
     
-    // Extract and analyze comments
+    // Extract and analyze comments (support both `comment` and `comments` fields)
     const comments = feedbackDocs
-        .filter(fb => fb.comments && fb.comments.trim() !== '')
-        .map(fb => fb.comments.toLowerCase().trim());
+        .map(fb => (fb.comment || fb.comments || '').toString().trim())
+        .filter(text => text !== '')
+        .map(text => text.toLowerCase());
     
     // Identify common issues and improvement suggestions
+    console.log('[FeedbackAnalysis] Extracted comments:', comments);
     const commonIssues = identifyCommonIssues(comments);
+    console.log('[FeedbackAnalysis] Common issues detected:', commonIssues);
     const improvementSuggestions = identifyImprovementSuggestions(comments);
+    console.log('[FeedbackAnalysis] Improvement suggestions detected:', improvementSuggestions);
     const sentimentAnalysis = performSentimentAnalysis(feedbackDocs);
     const topKeywords = extractTopKeywords(comments);
     
@@ -279,6 +299,7 @@ function identifyCommonIssues(comments) {
         'Staff Behavior': ['staff', 'service', 'attitude', 'helpful', 'rude', 'friendly'],
         'Event Content': ['content', 'activity', 'program', 'entertainment', 'performance', 'show'],
         'Facilities': ['facility', 'toilet', 'parking', 'seating', 'ac', 'lighting', 'comfort'],
+        'Transport': ['transport', 'vehicle', 'bus', 'cab', 'commute', 'travel', 'traffic'],
         'Value for Money': ['price', 'cost', 'value', 'expensive', 'cheap', 'worth', 'money'],
         'Crowd Management': ['crowd', 'queue', 'waiting', 'line', 'space', 'overcrowd']
     };
@@ -286,29 +307,29 @@ function identifyCommonIssues(comments) {
     const issues = {};
     
     comments.forEach(comment => {
+        const lowerComment = comment.toLowerCase();
         // Tokenize and stem the comment
         const tokenizer = new natural.WordTokenizer();
-        const tokens = tokenizer.tokenize(comment.toLowerCase());
+        const tokens = tokenizer.tokenize(lowerComment);
         const stemmedTokens = tokens.map(token => PorterStemmer.stem(token));
-        
+
         // Check for each category
         for (const [category, keywords] of Object.entries(issueCategories)) {
             let issueCount = 0;
-            
-            // Check stemmed tokens
-            for (const token of stemmedTokens) {
-                if (keywords.some(keyword => token.includes(PorterStemmer.stem(keyword)))) {
-                    issueCount++;
-                }
-            }
-            
-            // Also check original comment for phrases
+
             for (const keyword of keywords) {
-                if (comment.includes(keyword)) {
+                const key = keyword.toLowerCase();
+                const keyStem = PorterStemmer.stem(key);
+
+                // match whole token, token contains, stem equality, or original phrase in comment
+                const tokenMatch = tokens.some(t => t === key || t.includes(key) || PorterStemmer.stem(t) === keyStem);
+                const phraseMatch = lowerComment.includes(key);
+
+                if (tokenMatch || phraseMatch) {
                     issueCount++;
                 }
             }
-            
+
             if (issueCount > 0) {
                 issues[category] = (issues[category] || 0) + issueCount;
             }
@@ -316,10 +337,12 @@ function identifyCommonIssues(comments) {
     });
     
     // Sort by frequency and return top 5
-    return Object.entries(issues)
+    const sorted = Object.entries(issues)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([issue, count]) => ({ issue, count }));
+    console.log('[FeedbackAnalysis] issues map ->', sorted);
+    return sorted;
 }
 
 // Helper function to identify improvement suggestions
@@ -328,6 +351,7 @@ function identifyImprovementSuggestions(comments) {
         'Better Organization': ['organiz', 'arrang', 'planning', 'schedule', 'timing', 'management'],
         'Improved Food Quality': ['food', 'meal', 'catering', 'taste', 'quality', 'menu'],
         'Enhanced Facilities': ['facility', 'toilet', 'parking', 'seating', 'ac', 'lighting', 'comfort'],
+        'Improved Transport': ['transport', 'vehicle', 'bus', 'cab', 'commute', 'travel', 'traffic'],
         'More Activities': ['activity', 'entertainment', 'program', 'content', 'performance'],
         'Better Staff Training': ['staff', 'service', 'attitude', 'helpful', 'rude', 'friendly'],
         'Improved Value': ['price', 'cost', 'value', 'expensive', 'cheap', 'worth', 'money'],
@@ -336,47 +360,35 @@ function identifyImprovementSuggestions(comments) {
     
     const suggestions = {};
     
+    const improvementKeywords = ['should', 'could', 'need', 'better', 'more', 'improve', 'enhance',
+                               'add', 'change', 'different', 'alternative', 'next time'];
+    const negativeKeywords = ['bad', 'poor', 'terrible', 'awful', 'worst', 'hate', 'dislike', 'disappoint', 'not good', 'unsatisfactory', 'lack', 'missing', 'insufficient', 'inadequate'];
+
     comments.forEach(comment => {
-        // Tokenize and stem the comment
+        const lowerComment = comment.toLowerCase();
         const tokenizer = new natural.WordTokenizer();
-        const tokens = tokenizer.tokenize(comment.toLowerCase());
-        const stemmedTokens = tokens.map(token => PorterStemmer.stem(token));
-        
-        // Look for improvement keywords
-        const improvementKeywords = ['should', 'could', 'need', 'better', 'more', 'improve', 'enhance',
-                                   'add', 'change', 'different', 'alternative', 'next time'];
-        
-        // Check if comment has improvement keywords
-        const hasImprovementKeyword = tokens.some(token => 
-            improvementKeywords.some(keyword => token.includes(keyword))
-        );
-        
-        // Check if comment has negative sentiment (for implicit improvement suggestions)
-        const negativeKeywords = ['bad', 'poor', 'terrible', 'awful', 'worst', 'hate', 'dislike', 'disappoint', 'not good', 'unsatisfactory', 'lack', 'missing', 'insufficient', 'inadequate'];
-        const hasNegativeKeyword = tokens.some(token => 
-            negativeKeywords.some(keyword => token.includes(keyword))
-        );
-        
+        const tokens = tokenizer.tokenize(lowerComment);
+
+        const hasImprovementKeyword = tokens.some(t => improvementKeywords.some(k => t.includes(k) || PorterStemmer.stem(t) === PorterStemmer.stem(k)));
+        const hasNegativeKeyword = tokens.some(t => negativeKeywords.some(k => t.includes(k) || PorterStemmer.stem(t) === PorterStemmer.stem(k)));
+
         // If comment has improvement keywords or negative sentiment, look for suggestion categories
         if (hasImprovementKeyword || hasNegativeKeyword) {
-            // Check for each category
             for (const [category, keywords] of Object.entries(suggestionCategories)) {
                 let suggestionCount = 0;
-                
-                // Check stemmed tokens
-                for (const token of stemmedTokens) {
-                    if (keywords.some(keyword => token.includes(PorterStemmer.stem(keyword)))) {
-                        suggestionCount++;
-                    }
-                }
-                
-                // Also check original comment for phrases
+
                 for (const keyword of keywords) {
-                    if (comment.includes(keyword)) {
+                    const key = keyword.toLowerCase();
+                    const keyStem = PorterStemmer.stem(key);
+
+                    const tokenMatch = tokens.some(t => t === key || t.includes(key) || PorterStemmer.stem(t) === keyStem);
+                    const phraseMatch = lowerComment.includes(key);
+
+                    if (tokenMatch || phraseMatch) {
                         suggestionCount++;
                     }
                 }
-                
+
                 if (suggestionCount > 0) {
                     suggestions[category] = (suggestions[category] || 0) + suggestionCount;
                 }
@@ -391,7 +403,8 @@ function identifyImprovementSuggestions(comments) {
             'Venue/Location': ['venue', 'location', 'place', 'space', 'area', 'room', 'hall'],
             'Organization': ['organiz', 'arrang', 'planning', 'schedule', 'timing', 'management'],
             'Facilities': ['facility', 'toilet', 'parking', 'seating', 'ac', 'lighting', 'comfort'],
-            'Crowd Management': ['crowd', 'queue', 'waiting', 'line', 'space', 'overcrowd']
+            'Crowd Management': ['crowd', 'queue', 'waiting', 'line', 'space', 'overcrowd'],
+            'Transport': ['transport', 'vehicle', 'bus', 'cab', 'commute', 'travel', 'traffic']
         };
         
         // Check if any issue keywords appear in comments
@@ -434,10 +447,12 @@ function identifyImprovementSuggestions(comments) {
     }
     
     // Sort by frequency and return top 5
-    return Object.entries(suggestions)
+    const sorted = Object.entries(suggestions)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([suggestion, count]) => ({ suggestion, count }));
+    console.log('[FeedbackAnalysis] suggestions map ->', sorted);
+    return sorted;
 }
 
 // Helper function for sentiment analysis
@@ -463,9 +478,10 @@ function performSentimentAnalysis(feedbackDocs) {
         
         // Get text-based sentiment if comment exists
         let textSentiment = 0;
-        if (fb.comments && fb.comments.trim() !== '') {
+        const text = (fb.comment || fb.comments || '').toString().trim();
+        if (text !== '') {
             const tokenizer = new natural.WordTokenizer();
-            const tokens = tokenizer.tokenize(fb.comments.toLowerCase());
+            const tokens = tokenizer.tokenize(text.toLowerCase());
             textSentiment = analyzer.getSentiment(tokens);
         }
         

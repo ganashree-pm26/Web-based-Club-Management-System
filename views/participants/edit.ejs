@@ -1,53 +1,118 @@
 <!doctype html>
 <html>
-<head><title>Edit Participant</title></head>
+<head>
+  <title>Edit Participant</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+        min-height: 100vh;
+        background: radial-gradient(circle at top left, #4f46e5 0, #0f172a 45%, #020617 100%);
+        color: #e5e7eb;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .glass-card {
+        background: rgba(15, 23, 42, 0.9);
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.65);
+        color: #e5e7eb;
+        padding: 30px;
+        max-width: 700px;
+        width: 100%;
+    }
+    .form-control, .form-select {
+        background: rgba(30, 41, 59, 0.8) !important;
+        border: 1px solid rgba(148, 163, 184, 0.3) !important;
+        color: #e5e7eb !important;
+        border-radius: 8px !important;
+    }
+    .form-control:focus, .form-select:focus {
+        background: rgba(30, 41, 59, 0.9) !important;
+        border-color: #4f46e5 !important;
+        color: #e5e7eb !important;
+        box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25) !important;
+    }
+    label {
+        color: #e5e7eb !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #e5e7eb !important;
+    }
+  </style>
+</head>
 <body>
-  <h1>Edit Participant</h1>
-  <form method="POST" action="/participants/edit/<%= participant.ParticipantID %>">
-    <label>Name:</label>
-    <input type="text" name="name" value="<%= participant.ParticipantName %>" required><br><br>
+  <div class="glass-card">
+    <h1 class="mb-4">Edit Participant</h1>
+    <form method="POST" action="/participants/edit/<%= participant.ParticipantID %>">
+      <div class="mb-3">
+        <label class="form-label">Name:</label>
+        <input type="text" name="name" class="form-control" value="<%= participant.ParticipantName %>" required>
+      </div>
 
-    <label>Email:</label>
-    <input type="email" name="email" value="<%= participant.Email || '' %>"><br><br>
+      <div class="mb-3">
+        <label class="form-label">Email:</label>
+        <input type="email" name="email" class="form-control" value="<%= participant.Email || '' %>">
+      </div>
 
-    <label>Phone:</label>
-    <input type="text" name="phone" value="<%= participant.Phone || '' %>"><br><br>
+      <div class="mb-3">
+        <label class="form-label">Phone:</label>
+        <input type="text" name="phone" class="form-control" value="<%= participant.Phone || '' %>">
+      </div>
 
-    <label>Event:</label>
-    <select name="eventId">
-      <% events.forEach(e => { %>
-        <option value="<%= e.EventID %>" <%= e.EventID === participant.EventID ? 'selected' : '' %>><%= e.EventName %></option>
-      <% }) %>
-    </select><br><br>
+      <div class="mb-3">
+        <label class="form-label">Event:</label>
+        <select name="eventId" class="form-select">
+          <% events.forEach(e => { %>
+            <option value="<%= e.EventID %>" <%= e.EventID === participant.EventID ? 'selected' : '' %>><%= e.EventName %></option>
+          <% }) %>
+        </select>
+      </div>
 
-    <label>Team ID:</label>
-    <input type="text" name="teamId" value="<%= participant.TeamID || '' %>"><br><br>
+      <div class="mb-3">
+        <label class="form-label">Team ID:</label>
+        <input type="text" name="teamId" class="form-control" value="<%= participant.TeamID || '' %>">
+      </div>
 
-    <label>Team Name:</label>
-    <input type="text" name="teamName" value="<%= participant.TeamName || '' %>"><br><br>
+      <div class="mb-3">
+        <label class="form-label">Team Name:</label>
+        <input type="text" name="teamName" class="form-control" value="<%= participant.TeamName || '' %>">
+      </div>
 
-    <label>Pay Status:</label>
-    <select name="payStatus">
-      <option value="unpaid" <%= participant.PayStatus==='unpaid'?'selected':'' %>>Unpaid</option>
-      <option value="pending" <%= participant.PayStatus==='pending'?'selected':'' %>>Pending</option>
-      <option value="paid" <%= participant.PayStatus==='paid'?'selected':'' %>>Paid</option>
-    </select><br><br>
+      <div class="mb-3">
+        <label class="form-label">Pay Status:</label>
+        <select name="payStatus" class="form-select">
+          <option value="unpaid" <%= participant.PayStatus==='unpaid'?'selected':'' %>>Unpaid</option>
+          <option value="pending" <%= participant.PayStatus==='pending'?'selected':'' %>>Pending</option>
+          <option value="paid" <%= participant.PayStatus==='paid'?'selected':'' %>>Paid</option>
+        </select>
+      </div>
 
-    <label>Amount Paid:</label>
-    <input type="number" step="0.01" name="amountPaid" value="<%= participant.AmountPaid || 0 %>"><br><br>
+      <div class="mb-3">
+        <label class="form-label">Amount Paid:</label>
+        <input type="number" step="0.01" name="amountPaid" class="form-control" value="<%= participant.AmountPaid || 0 %>">
+      </div>
 
-    <label>Registration Date:</label>
-    <input type="date" name="regDate" value="<%= participant.RegDate ? new Date(participant.RegDate).toISOString().split('T')[0] : '' %>"><br><br>
+      <div class="mb-3">
+        <label class="form-label">Registration Date:</label>
+        <input type="date" name="regDate" class="form-control" value="<%= participant.RegDate ? new Date(participant.RegDate).toISOString().split('T')[0] : '' %>">
+      </div>
 
-    <label>Attendance:</label>
-    <select name="attendanceStatus">
-      <option value="pending" <%= participant.AttendanceStatus==='pending'?'selected':'' %>>Pending</option>
-      <option value="present" <%= participant.AttendanceStatus==='present'?'selected':'' %>>Present</option>
-      <option value="absent" <%= participant.AttendanceStatus==='absent'?'selected':'' %>>Absent</option>
-    </select><br><br>
+      <div class="mb-3">
+        <label class="form-label">Attendance:</label>
+        <select name="attendanceStatus" class="form-select">
+          <option value="pending" <%= participant.AttendanceStatus==='pending'?'selected':'' %>>Pending</option>
+          <option value="present" <%= participant.AttendanceStatus==='present'?'selected':'' %>>Present</option>
+          <option value="absent" <%= participant.AttendanceStatus==='absent'?'selected':'' %>>Absent</option>
+        </select>
+      </div>
 
-    <button type="submit">Save</button>
-  </form>
+      <button type="submit" class="btn btn-primary w-100">Save</button>
+    </form>
+  </div>
 </body>
 </html>
 

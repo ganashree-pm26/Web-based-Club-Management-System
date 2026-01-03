@@ -1,77 +1,123 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-    <title>Club Management System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .hero-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 80px 0;
-            margin-bottom: 50px;
-        }
-        .feature-card {
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            transition: all 0.3s;
-            height: 100%;
-        }
-        .feature-card:hover {
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-            transform: translateY(-5px);
-        }
-        .cta-button {
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            border-radius: 50px;
-        }
-    </style>
+  <meta charset="utf-8">
+  <title>Club Management System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, #4f46e5 0, #0f172a 45%, #020617 100%);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 24px;
+    }
+    .hero-title {
+      font-weight: 700;
+      letter-spacing: .03em;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.65);
+      color: #e5e7eb;
+    }
+    .glass-navbar {
+      background: rgba(15, 23, 42, 0.95) !important;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+      backdrop-filter: blur(10px);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(15,118,110,0.15);
+      color: #a5f3fc;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .feature-card {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 18px;
+      padding: 30px;
+      text-align: center;
+      transition: all 0.3s;
+      height: 100%;
+      color: #e5e7eb;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.65);
+    }
+    .feature-card:hover {
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.8);
+      transform: translateY(-5px);
+      border-color: rgba(148, 163, 184, 0.5);
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.9) !important;
+      border: 1px solid rgba(148, 163, 184, 0.3) !important;
+      border-radius: 18px !important;
+      color: #e5e7eb !important;
+    }
+    .card-header {
+      background: rgba(30, 41, 59, 0.8) !important;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3) !important;
+      color: #e5e7eb !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: #e5e7eb !important;
+    }
+    .text-secondary {
+      color: #94a3b8 !important;
+    }
+    code {
+      background: rgba(30, 41, 59, 0.8);
+      color: #60a5fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container-fluid">
-            <span class="navbar-brand">Club Management System</span>
-            <% if(user) { %>
-                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
-            <% } else { %>
-                <a href="/login" class="btn btn-outline-light btn-sm">Login</a>
-            <% } %>
-        </div>
-    </nav>
-
-    <div class="hero-section">
-        <div class="container text-center">
-            <h1 class="display-3 mb-4">Welcome to Club Management System</h1>
-            <p class="lead mb-5">Manage events, participants, budgets, and more in one place</p>
-            
-            <% if(!user) { %>
-                <div class="d-flex gap-3 justify-content-center flex-wrap">
-                    <a href="/participants/signup" class="btn btn-light cta-button">
-                        🎯 Register as Participant
-                    </a>
-                    <a href="/login" class="btn btn-outline-light cta-button">
-                        🔐 Login
-                    </a>
-                </div>
-            <% } else { %>
-                <a href="/<%= user.role === 'admin' ? 'admin' : user.role === 'coordinator' ? 'coordinator' : user.role === 'member' ? 'members' : user.role === 'sponsor' ? 'sponsors' : 'participants' %>/dashboard" class="btn btn-light cta-button">
-                    Go to Dashboard
-                </a>
-            <% } %>
-        </div>
-    </div>
-
+<body>
     <div class="container">
-        <h2 class="text-center mb-5">How It Works</h2>
+        <br><br><br>
+        <div class="row g-4 align-items-center justify-content-center mb-5">
+            <div class="col-lg-8 text-center">
+                
+                <h1 class="hero-title display-5 mb-3">Welcome to Club Management System</h1>
+                <p class="mb-4 text-secondary">
+                    Manage college events, teams, and budgets in one place.<br>
+                    This dashboard helps you track events, participants, tasks, sponsors and feedback for every club activity.
+                </p>
+                
+                <% if(!user) { %>
+                    <div class="d-flex gap-3 justify-content-center flex-wrap">
+                        <a href="/participants/signup" class="btn btn-primary">
+                            🎯 Register as Participant
+                        </a>
+                        <a href="/login" class="btn btn-outline-light">
+                            🔐 Login
+                        </a>
+                    </div>
+                <% } else { %>
+                    <a href="/<%= user.role === 'admin' ? 'admin' : user.role === 'coordinator' ? 'coordinator' : user.role === 'member' ? 'members' : user.role === 'sponsor' ? 'sponsors' : 'participants' %>/dashboard" class="btn btn-primary">
+                        Go to Dashboard
+                    </a>
+                <% } %>
+            </div>
+        </div>
+
+        <h2 class="text-center mb-4 hero-title">How It Works</h2>
         
         <div class="row mb-5">
             <div class="col-md-4 mb-4">
                 <div class="feature-card">
                     <div class="mb-3" style="font-size: 3rem;">🎯</div>
                     <h4>For Participants</h4>
-                    <p class="text-muted">New to our system? Sign up to register for events, make payments, and get your login credentials instantly!</p>
+                    <p class="text-secondary">New to our system? Sign up to register for events, make payments, and get your login credentials instantly!</p>
                     <a href="/participants/signup" class="btn btn-primary">Sign Up Now</a>
                 </div>
             </div>
@@ -79,7 +125,7 @@
                 <div class="feature-card">
                     <div class="mb-3" style="font-size: 3rem;">👥</div>
                     <h4>For Coordinators</h4>
-                    <p class="text-muted">Manage your events, participants, tasks, and budgets all from your dashboard.</p>
+                    <p class="text-secondary">Manage your events, participants, tasks, and budgets all from your dashboard.</p>
                     <a href="/login" class="btn btn-success">Coordinator Login</a>
                 </div>
             </div>
@@ -87,55 +133,55 @@
                 <div class="feature-card">
                     <div class="mb-3" style="font-size: 3rem;">👨‍💼</div>
                     <h4>For Admins</h4>
-                    <p class="text-muted">Full system control - manage events, coordinators, budgets, and view comprehensive reports.</p>
+                    <p class="text-secondary">Full system control - manage events, coordinators, budgets, and view comprehensive reports.</p>
                     <a href="/login" class="btn btn-warning">Admin Login</a>
                 </div>
             </div>
         </div>
 
-        <div class="card mb-5">
-            <div class="card-header bg-primary text-white">
+        <div class="glass-card mb-5">
+            <div class="card-header">
                 <h4 class="mb-0">🚀 Quick Start Guide for Participants</h4>
             </div>
             <div class="card-body">
                 <ol class="mb-0">
                     <li class="mb-3">
                         <strong>Step 1: Sign Up</strong><br>
-                        Click on <a href="/participants/signup">"Register as Participant"</a> or visit <code>/participants/signup</code>
+                        <span class="text-secondary">Click on <a href="/participants/signup">"Register as Participant"</a> or visit <code>/participants/signup</code></span>
                     </li>
                     <li class="mb-3">
                         <strong>Step 2: Browse Events</strong><br>
-                        View all available upcoming events with details like date, venue, and registered participants
+                        <span class="text-secondary">View all available upcoming events with details like date, venue, and registered participants</span>
                     </li>
                     <li class="mb-3">
                         <strong>Step 3: Select Event</strong><br>
-                        Click on an event card to select it for registration
+                        <span class="text-secondary">Click on an event card to select it for registration</span>
                     </li>
                     <li class="mb-3">
                         <strong>Step 4: Fill Registration Form</strong><br>
-                        Enter your details (name, email, phone), team info (optional), payment amount, and create a password
+                        <span class="text-secondary">Enter your details (name, email, phone), team info (optional), payment amount, and create a password</span>
                     </li>
                     <li class="mb-3">
                         <strong>Step 5: Get Credentials</strong><br>
-                        After successful registration, you'll receive your username and password
+                        <span class="text-secondary">After successful registration, you'll receive your username and password</span>
                     </li>
                     <li>
                         <strong>Step 6: Login</strong><br>
-                        Use your credentials to login at <a href="/login">/login</a> and access your participant dashboard
+                        <span class="text-secondary">Use your credentials to login at <a href="/login">/login</a> and access your participant dashboard</span>
                     </li>
                 </ol>
             </div>
         </div>
 
         <div class="text-center mb-5">
-            <h3>Ready to Get Started?</h3>
-            <a href="/participants/signup" class="btn btn-primary btn-lg">Register as Participant</a>
+            <h3 class="hero-title">Ready to Get Started?</h3>
+            <a href="/participants/signup" class="btn btn-primary">Register as Participant</a>
         </div>
     </div>
 
-    <footer class="bg-dark text-white text-center py-4 mt-5">
+    <footer class="text-center py-4 mt-5">
         <div class="container">
-            <p class="mb-0">&copy; 2025 Club Management System - DBMS Project</p>
+            <p class="mb-0 text-secondary">&copy; 2025 Club Management System</p>
         </div>
     </footer>
 
