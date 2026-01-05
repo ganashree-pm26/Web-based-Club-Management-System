@@ -88,6 +88,12 @@
             </div>
             <div class="col-md-2">
                 <div class="stat-card text-center">
+                    <h3>₹<%= parseFloat(summary.totalBudget || 0).toLocaleString() %></h3>
+                    <small>Total Budget</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card text-center">
                     <h3>₹<%= parseFloat(summary.netProfit).toLocaleString() %></h3>
                     <small>Net Profit</small>
                 </div>

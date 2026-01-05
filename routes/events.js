@@ -83,6 +83,7 @@ router.get("/delete/:id", isAdmin, (req, res) => {
                 "DELETE FROM participant WHERE EventID = ?",
                 "DELETE FROM sponsor WHERE EventID = ?",
                 "DELETE FROM expenditure WHERE EventID = ?",
+                "DELETE FROM income WHERE EventID = ?",
                 "DELETE FROM budget WHERE EventID = ?",
                 "DELETE FROM event WHERE EventID = ?"
             ];

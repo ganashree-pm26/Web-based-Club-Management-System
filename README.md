@@ -71,7 +71,7 @@ This project is developed as part of a **DBMS mini-project**, focusing on databa
 
 ## Technologies Used
 - **Frontend:** HTML, CSS, Bootstrap
-- **Backend:** Python (Flask)
+- **Backend:** Node.js + Express
 - **Database:** MySQL
 - **Analytics & AI:** Python-based data analysis
 - **Tools:** MySQL Workbench, GitHub

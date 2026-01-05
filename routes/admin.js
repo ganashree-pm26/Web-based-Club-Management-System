@@ -580,6 +580,7 @@ router.get("/analytics", isAdmin, (req, res) => {
     const totalAttendeesSql = "SELECT COUNT(*) as totalAttendees FROM participant WHERE AttendanceStatus = 'Present'";
     const totalIncomeSql = "SELECT COALESCE(SUM(Amount), 0) as totalIncome FROM income";
     const totalExpenditureSql = "SELECT COALESCE(SUM(Amount), 0) as totalExpenditure FROM expenditure";
+    const totalBudgetSql = "SELECT COALESCE(SUM(AllocatedAmount), 0) as totalBudget FROM budget";
     
     // Query 4: Event participation trends (no date restriction)
     const trendSql = `
@@ -627,49 +628,69 @@ router.get("/analytics", isAdmin, (req, res) => {
                         return res.status(500).send("Database error");
                     }
                     
-                    db.query(totalExpenditureSql, (err, totalExpenditureResult) => {
+                    // Add query for total budget
+                    const totalBudgetSql = "SELECT COALESCE(SUM(AllocatedAmount), 0) as totalBudget FROM budget";
+                    
+                    db.query(totalBudgetSql, (err, totalBudgetResult) => {
                         if (err) {
-                            console.error('Total expenditure query error:', err);
+                            console.error('Total budget query error:', err);
                             return res.status(500).send("Database error");
                         }
                         
-                        db.query(turnoutSql, (err, turnoutResults) => {
+                        db.query(totalExpenditureSql, (err, totalExpenditureResult) => {
                             if (err) {
-                                console.error('Turnout query error:', err);
+                                console.error('Total expenditure query error:', err);
                                 return res.status(500).send("Database error");
                             }
                             
-                            db.query(budgetSql, (err, budgetResults) => {
+                            db.query(turnoutSql, (err, turnoutResults) => {
                                 if (err) {
-                                    console.error('Budget query error:', err);
+                                    console.error('Turnout query error:', err);
                                     return res.status(500).send("Database error");
                                 }
                                 
-                                db.query(trendSql, (err, trendResults) => {
+                                db.query(budgetSql, (err, budgetResults) => {
                                     if (err) {
-                                        console.error('Trend query error:', err);
+                                        console.error('Budget query error:', err);
                                         return res.status(500).send("Database error");
                                     }
                                     
-                                    // Calculate net profit
-                                    const netProfit = parseFloat(totalIncomeResult[0].totalIncome || 0) - parseFloat(totalExpenditureResult[0].totalExpenditure || 0);
-                                    
-                                    // Combine all summary data
-                                    const summary = {
-                                        totalEvents: totalEventsResult[0].totalEvents || 0,
-                                        totalRegistrations: totalRegistrationsResult[0].totalRegistrations || 0,
-                                        totalAttendees: totalAttendeesResult[0].totalAttendees || 0,
-                                        totalIncome: totalIncomeResult[0].totalIncome || 0,
-                                        totalExpenditure: totalExpenditureResult[0].totalExpenditure || 0,
-                                        netProfit: netProfit
-                                    };
-                                    
-                                    res.render("admin/analytics", { 
-                                        summary: summary,
-                                        turnoutData: turnoutResults,
-                                        budgetData: budgetResults,
-                                        trendData: trendResults,
-                                        user: req.session.user 
+                                    db.query(trendSql, (err, trendResults) => {
+                                        if (err) {
+                                            console.error('Trend query error:', err);
+                                            return res.status(500).send("Database error");
+                                        }
+                                        
+                                        // Calculate net profit: Income - Expenditure + Budget
+                                        const totalBudget = parseFloat(totalBudgetResult[0].totalBudget || 0);
+                                        const totalIncome = parseFloat(totalIncomeResult[0].totalIncome || 0);
+                                        const totalExpenditure = parseFloat(totalExpenditureResult[0].totalExpenditure || 0);
+                                        const netProfit = totalIncome - totalExpenditure + totalBudget;
+                                        
+                                        console.log('Analytics Summary:');
+                                        console.log('Total Budget:', totalBudget);
+                                        console.log('Total Income:', totalIncome);
+                                        console.log('Total Expenditure:', totalExpenditure);
+                                        console.log('Net Profit (Income - Expenditure + Budget):', netProfit);
+                                        
+                                        // Combine all summary data
+                                        const summary = {
+                                            totalEvents: totalEventsResult[0].totalEvents || 0,
+                                            totalRegistrations: totalRegistrationsResult[0].totalRegistrations || 0,
+                                            totalAttendees: totalAttendeesResult[0].totalAttendees || 0,
+                                            totalIncome: totalIncome,
+                                            totalExpenditure: totalExpenditure,
+                                            totalBudget: totalBudget,
+                                            netProfit: netProfit
+                                        };
+                                        
+                                        res.render("admin/analytics", { 
+                                            summary: summary,
+                                            turnoutData: turnoutResults,
+                                            budgetData: budgetResults,
+                                            trendData: trendResults,
+                                            user: req.session.user 
+                                        });
                                     });
                                 });
                             });
