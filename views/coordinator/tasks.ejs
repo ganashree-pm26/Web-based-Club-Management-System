@@ -120,7 +120,13 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-warning" onclick="editTask(<%= t.TaskID %>, '<%= t.TaskName %>', '<%= (t.Description || '').replace(/'/g, "\\'") %>', '<%= t.Deadline ? new Date(t.Deadline).toISOString().split('T')[0] : '' %>', <%= t.AssignedTo || 'null' %>, '<%= t.Status %>')">Edit</button>
+                                    <button class="btn btn-sm btn-warning edit-task-btn" 
+                                            data-task-id="<%= t.TaskID %>"
+                                            data-task-name="<%= (t.TaskName || '').replace(/"/g, '&quot;') %>"
+                                            data-description="<%= (t.Description || '').replace(/"/g, '&quot;') %>"
+                                            data-deadline="<%= t.Deadline ? new Date(t.Deadline).toISOString().split('T')[0] : '' %>"
+                                            data-assigned-to="<%= t.AssignedTo || '' %>"
+                                            data-status="<%= t.Status || 'Pending' %>">Edit</button>
                                     <a href="/coordinator/events/<%= event.EventID %>/tasks/<%= t.TaskID %>/delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">Delete</a>
                                 </td>
                             </tr>
@@ -223,15 +229,26 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function editTask(id, name, desc, deadline, assignedTo, status) {
-            document.getElementById('editTaskForm').action = `/coordinator/events/<%= event.EventID %>/tasks/${id}/update`;
-            document.getElementById('editTaskName').value = name;
-            document.getElementById('editDescription').value = desc;
-            document.getElementById('editDeadline').value = deadline;
-            document.getElementById('editAssignedTo').value = assignedTo || '';
-            document.getElementById('editStatus').value = status;
-            new bootstrap.Modal(document.getElementById('editTaskModal')).show();
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.edit-task-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    const taskName = this.getAttribute('data-task-name');
+                    const description = this.getAttribute('data-description');
+                    const deadline = this.getAttribute('data-deadline');
+                    const assignedTo = this.getAttribute('data-assigned-to');
+                    const status = this.getAttribute('data-status');
+                    
+                    document.getElementById('editTaskForm').action = `/coordinator/events/<%= event.EventID %>/tasks/${taskId}/update`;
+                    document.getElementById('editTaskName').value = taskName;
+                    document.getElementById('editDescription').value = description;
+                    document.getElementById('editDeadline').value = deadline;
+                    document.getElementById('editAssignedTo').value = assignedTo || '';
+                    document.getElementById('editStatus').value = status;
+                    new bootstrap.Modal(document.getElementById('editTaskModal')).show();
+                });
+            });
+        });
     </script>
 </body>
 </html>

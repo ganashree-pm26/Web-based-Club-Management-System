@@ -49,19 +49,20 @@
         <h1 class="mb-4">Register for Event</h1>
 
         <form action="/participants/register" method="POST">
+            <% var pData = typeof participantData !== 'undefined' ? participantData : null; %>
             <div class="mb-3">
                 <label class="form-label">Name:</label>
-                <input type="text" name="name" class="form-control" required>
+                <input type="text" name="name" class="form-control" value="<%= pData && pData.name ? pData.name : '' %>" required>
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Email:</label>
-                <input type="email" name="email" class="form-control">
+                <input type="email" name="email" class="form-control" value="<%= pData && pData.email ? pData.email : '' %>">
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Phone:</label>
-                <input type="text" name="phone" class="form-control">
+                <input type="text" name="phone" class="form-control" value="<%= pData && pData.phone ? pData.phone : '' %>">
             </div>
 
             <div class="mb-3">

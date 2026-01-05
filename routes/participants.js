@@ -149,10 +149,36 @@ router.get("/signup", (req, res) => {
 // GET registration form (for coordinators/admins - keeps existing functionality)
 router.get("/register", (req, res) => {
   const preSelectedEventId = req.query.eventId;
+  
+  // Check if user is logged in as participant and get their details
+  if (req.session?.user?.role === "participant" && req.session.user.linkedId) {
+    const participantId = req.session.user.linkedId;
+    db.query(
+      "SELECT DISTINCT ParticipantName, Email, Phone FROM participant WHERE ParticipantID = ? LIMIT 1",
+      [participantId],
+      (err, rows) => {
+        let participantData = null;
+        if (!err && rows.length > 0) {
+          participantData = {
+            name: rows[0].ParticipantName,
+            email: rows[0].Email,
+            phone: rows[0].Phone
+          };
+        }
+        // Continue to fetch events
+        db.query("SELECT EventID, EventName FROM event", (err2, events) => {
+          if (err2) return res.status(500).send("Database error");
+          res.render("participants/register", { events, preSelectedEventId, participantData });
+        });
+      }
+    );
+  } else {
+    // Not a participant, just fetch events
     db.query("SELECT EventID, EventName FROM event", (err, events) => {
-        if (err) return res.status(500).send("Database error");
-    res.render("participants/register", { events, preSelectedEventId });
+      if (err) return res.status(500).send("Database error");
+      res.render("participants/register", { events, preSelectedEventId, participantData: null });
     });
+  }
 });
 
 // Public signup - CREATE participant and user account
