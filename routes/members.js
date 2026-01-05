@@ -7,7 +7,8 @@ const { isMember } = require("../middleware/role");
 router.get("/dashboard", isMember, (req, res) => {
   const memberId = req.session.user.linkedId;
   const sql = `
-    SELECT t.TaskID, t.TaskName, t.Description, t.Status, t.Deadline, e.EventName, e.EventDate, e.Venue, m.MemberName
+    SELECT t.TaskID, t.TaskName, t.Description, t.Status, t.Deadline,
+     e.EventName, e.EventDate, e.Venue, m.MemberName
     FROM task t
     JOIN event e ON t.EventID = e.EventID
     LEFT JOIN member m ON t.AssignedTo = m.MemberID

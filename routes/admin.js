@@ -707,3 +707,245 @@ module.exports = {
     router,
     isAdmin
 };
+
+// ========== EVENT PDF SUMMARY DOWNLOAD (with charts & feedback analysis) ==========
+router.get("/events/:eventId/download-pdf", isAdmin, (req, res) => {
+    const eventId = req.params.eventId;
+    const PDFDocument = require('pdfkit');
+    const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
+    const { MongoClient, ObjectId } = require('mongodb');
+    const natural = require('natural');
+    const { SentimentAnalyzer, PorterStemmer } = natural;
+
+    const mongoUrl = 'mongodb://localhost:27017';
+    const mongoDBName = 'club_feedback';
+    const mongoCollection = 'feedback';
+
+    const eventSql = `SELECT * FROM event WHERE EventID = ?`;
+    const participantsSql = `SELECT COUNT(*) as totalParticipants FROM participant WHERE EventID = ?`;
+    const participantsStatusSql = `SELECT AttendanceStatus, COUNT(*) as cnt FROM participant WHERE EventID = ? GROUP BY AttendanceStatus`;
+    const budgetSql = `SELECT SUM(AllocatedAmount) as totalBudget FROM budget WHERE EventID = ?`;
+    const expenditureSql = `SELECT SUM(Amount) as totalSpent FROM expenditure WHERE EventID = ?`;
+    const feedbackCountSql = `SELECT COUNT(*) as totalFeedback FROM feedbackMapping WHERE EventID = ?`;
+    const feedbackMappingSql = `SELECT MongoFeedbackKey FROM feedbackMapping WHERE EventID = ?`;
+    const coordinatorsSql = `
+        SELECT DISTINCT m.MemberName, m.Email, m.Phone 
+        FROM coordinates c
+        JOIN member m ON c.MemberID = m.MemberID
+        WHERE c.EventID = ?
+    `;
+    const membersSql = `
+        SELECT DISTINCT m.MemberName, m.Email, m.Phone 
+        FROM member m
+        JOIN participant p ON m.MemberID = p.MemberID
+        WHERE p.EventID = ?
+    `;
+    const sponsorsSql = `SELECT SponsorName, Contribution FROM sponsor WHERE EventID = ?`;
+    const budgetDetailsSql = `SELECT Category, AllocatedAmount FROM budget WHERE EventID = ? ORDER BY Category`;
+    const expenditureDetailsSql = `SELECT Category, SUM(Amount) as Amount FROM expenditure WHERE EventID = ? GROUP BY Category ORDER BY Category`;
+
+    const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="event-summary-${eventId}.pdf"`);
+    doc.pipe(res);
+
+    db.query(eventSql, [eventId], (err, eventRows) => {
+        if (err || eventRows.length === 0) return res.status(404).send('Event not found');
+        const event = eventRows[0];
+
+        let participants, participantsStatus = [], budget, expenditure, feedbackCount, feedbackDocs = [], coordinators, members, sponsors, budgetDetails, expenditureDetails;
+        let completed = 0; const needed = 10;
+        const done = () => { if (++completed === needed) proceed(); };
+
+        db.query(participantsSql, [eventId], (e, r) => { participants = r[0] || { totalParticipants: 0 }; done(); });
+        db.query(participantsStatusSql, [eventId], (e, r) => { participantsStatus = r || []; done(); });
+        db.query(budgetSql, [eventId], (e, r) => { budget = r[0] || { totalBudget: 0 }; done(); });
+        db.query(expenditureSql, [eventId], (e, r) => { expenditure = r[0] || { totalSpent: 0 }; done(); });
+        db.query(feedbackCountSql, [eventId], (e, r) => { feedbackCount = r[0] || { totalFeedback: 0 }; done(); });
+
+        // mapping -> mongo docs
+        db.query(feedbackMappingSql, [eventId], async (e, rows) => {
+            try {
+                if (!rows || rows.length === 0) { feedbackDocs = []; done(); return; }
+                const keys = rows.map(x => x.MongoFeedbackKey).filter(Boolean);
+                if (keys.length === 0) { feedbackDocs = []; done(); return; }
+                const client = new MongoClient(mongoUrl);
+                await client.connect();
+                const dbMongo = client.db(mongoDBName);
+                const objectIds = [], stringKeys = [];
+                keys.forEach(k => { if (/^[0-9a-fA-F]{24}$/.test(k)) { try { objectIds.push(new ObjectId(k)); } catch(_) { stringKeys.push(k); } } else stringKeys.push(k); });
+                const conds = [];
+                if (objectIds.length) conds.push({ _id: { $in: objectIds } });
+                if (stringKeys.length) conds.push({ feedbackKey: { $in: stringKeys } });
+                let q = {};
+                if (conds.length === 1) q = conds[0]; else if (conds.length > 1) q = { $or: conds };
+                feedbackDocs = Object.keys(q).length ? await dbMongo.collection(mongoCollection).find(q).toArray() : [];
+                await client.close();
+            } catch (ex) { console.error('feedback mongo error', ex); feedbackDocs = []; }
+            done();
+        });
+
+        db.query(coordinatorsSql, [eventId], (e, r) => { coordinators = r || []; done(); });
+        db.query(membersSql, [eventId], (e, r) => { members = r || []; done(); });
+        db.query(sponsorsSql, [eventId], (e, r) => { sponsors = r || []; done(); });
+        db.query(budgetDetailsSql, [eventId], (e, r) => { budgetDetails = r || []; done(); });
+        db.query(expenditureDetailsSql, [eventId], (e, r) => { expenditureDetails = r || []; done(); });
+
+        const proceed = async () => {
+            try {
+                const width = 700, height = 350;
+                const chartRenderer = new ChartJSNodeCanvas({ width, height });
+
+                // Header and Event Details (textual)
+                doc.fontSize(20).font('Helvetica-Bold').text('EVENT SUMMARY', { align: 'center' });
+                doc.moveDown(0.3);
+                doc.fontSize(12).font('Helvetica-Bold').text(event.EventName);
+                doc.fontSize(10).font('Helvetica').text(`Date: ${new Date(event.EventDate).toLocaleDateString()}    Venue: ${event.Venue}`);
+                doc.moveDown(0.4);
+
+                // Key statistics (text)
+                doc.fontSize(12).font('Helvetica-Bold').text('Key Statistics');
+                doc.fontSize(11).font('Helvetica');
+                doc.text(`Total Participants: ${participants.totalParticipants || 0}`);
+                doc.text(`Total Feedback Responses: ${feedbackCount ? feedbackCount.totalFeedback : 0}`);
+                const totalBudget = (budget && budget.totalBudget) ? Number(budget.totalBudget) : 0;
+                const totalSpent = (expenditure && expenditure.totalSpent) ? Number(expenditure.totalSpent) : 0;
+                const utilization = totalBudget > 0 ? ((totalSpent / totalBudget) * 100).toFixed(2) : '0.00';
+                doc.text(`Total Budget Allocated: ₹${totalBudget.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
+                doc.text(`Total Amount Spent: ₹${totalSpent.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
+                doc.text(`Budget Utilization: ${utilization}%`);
+                doc.moveDown(0.3);
+
+                // Budget breakdown text
+                if (budgetDetails && budgetDetails.length > 0) {
+                    doc.fontSize(12).font('Helvetica-Bold').text('Budget Breakdown');
+                    doc.fontSize(10).font('Helvetica');
+                    budgetDetails.forEach(bd => {
+                        doc.text(`• ${bd.Category}: ₹${Number(bd.AllocatedAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
+                    });
+                    doc.moveDown(0.2);
+                }
+
+                // Expenditure breakdown text
+                if (expenditureDetails && expenditureDetails.length > 0) {
+                    doc.fontSize(12).font('Helvetica-Bold').text('Expenditure Breakdown');
+                    doc.fontSize(10).font('Helvetica');
+                    expenditureDetails.forEach(ed => {
+                        doc.text(`• ${ed.Category}: ₹${Number(ed.Amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
+                    });
+                    doc.moveDown(0.2);
+                }
+
+                // Coordinators
+                if (coordinators && coordinators.length > 0) {
+                    doc.fontSize(12).font('Helvetica-Bold').text('Coordinators');
+                    doc.fontSize(10).font('Helvetica');
+                    coordinators.forEach((c, i) => {
+                        doc.text(`${i+1}. ${c.MemberName} ${c.Email ? `| ${c.Email}` : ''} ${c.Phone ? `| ${c.Phone}` : ''}`);
+                    });
+                    doc.moveDown(0.2);
+                }
+
+                // Members (truncated)
+                if (members && members.length > 0) {
+                    doc.fontSize(12).font('Helvetica-Bold').text('Participating Members (sample)');
+                    doc.fontSize(10).font('Helvetica');
+                    members.slice(0, 15).forEach((m, i) => doc.text(`${i+1}. ${m.MemberName}`));
+                    if (members.length > 15) doc.text(`... and ${members.length-15} more members`);
+                    doc.moveDown(0.2);
+                }
+
+                // Sponsors
+                if (sponsors && sponsors.length > 0) {
+                    doc.fontSize(12).font('Helvetica-Bold').text('Sponsors');
+                    doc.fontSize(10).font('Helvetica');
+                    sponsors.forEach((s, i) => doc.text(`${i+1}. ${s.SponsorName} — ₹${Number(s.Contribution||0).toLocaleString('en-IN', {maximumFractionDigits:2})}`));
+                    doc.moveDown(0.2);
+                }
+
+                // Put charts on new pages so they render fully
+                // Budget utilization chart
+                try {
+                    doc.addPage();
+                    const spent = Number(totalSpent || 0);
+                    const remaining = Math.max(0, Number(totalBudget || 0) - spent);
+                    const budgetCfg = {
+                        type: 'doughnut',
+                        data: { labels: ['Spent', 'Remaining'], datasets: [{ data: (spent === 0 && remaining === 0) ? [0,1] : [spent, remaining], backgroundColor: ['#43e97b', '#4facfe'] }] },
+                        options: { plugins: { legend: { display: true } } }
+                    };
+                    const buf1 = await chartRenderer.renderToBuffer(budgetCfg);
+                    doc.fontSize(12).font('Helvetica-Bold').text('Budget Utilization', { align: 'left' });
+                    doc.image(buf1, { fit: [500, 260], align: 'center' });
+                } catch (e) {
+                    console.error('Budget chart rendering error', e);
+                }
+
+                // Participation chart
+                try {
+                    doc.addPage();
+                    const pLabels = (participantsStatus && participantsStatus.length) ? participantsStatus.map(s => s.AttendanceStatus || 'Unknown') : ['No Data'];
+                    const pVals = (participantsStatus && participantsStatus.length) ? participantsStatus.map(s => Number(s.cnt || 0)) : [1];
+                    const partCfg = { type: 'pie', data: { labels: pLabels, datasets: [{ data: pVals, backgroundColor: ['#4facfe', '#43e97b', '#f093fb'] }] }, options: { plugins: { legend: { display: true } } } };
+                    const buf2 = await chartRenderer.renderToBuffer(partCfg);
+                    doc.fontSize(12).font('Helvetica-Bold').text('Participation Analytics', { align: 'left' });
+                    doc.image(buf2, { fit: [500, 260], align: 'center' });
+                } catch (e) {
+                    console.error('Participation chart rendering error', e);
+                }
+
+                // Feedback charts and analysis
+                if (feedbackDocs && feedbackDocs.length > 0) {
+                    try {
+                        doc.addPage();
+                        const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+                        feedbackDocs.forEach(f => { const r = parseInt(f.rating || 0) || 0; if (ratingCounts[r] !== undefined) ratingCounts[r]++; });
+                        const rLabels = Object.keys(ratingCounts);
+                        const rVals = Object.values(ratingCounts);
+                        const ratingsCfg = { type: 'bar', data: { labels: rLabels, datasets: [{ label: 'Ratings', data: rVals, backgroundColor: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'] }] }, options: { plugins: { legend: { display: false } } } };
+                        const buf3 = await chartRenderer.renderToBuffer(ratingsCfg);
+                        doc.fontSize(12).font('Helvetica-Bold').text('Ratings Distribution', { align: 'left' });
+                        doc.image(buf3, { fit: [500, 260], align: 'center' });
+
+                        // Sentiment
+                        const analyzer = new SentimentAnalyzer('English', PorterStemmer, 'afinn');
+                        const sentiments = { positive: 0, neutral: 0, negative: 0 };
+                        feedbackDocs.forEach(f => {
+                            const rating = parseInt(f.rating || 0);
+                            let rSent = 0; if (rating >= 4) rSent = 1; else if (rating <= 2) rSent = -1;
+                            let txtSent = 0; const text = (f.comment || f.comments || '').toString().trim(); if (text) txtSent = analyzer.getSentiment(new natural.WordTokenizer().tokenize(text.toLowerCase()));
+                            const comb = rSent !== 0 ? rSent : Math.sign(txtSent);
+                            if (comb > 0) sentiments.positive++; else if (comb < 0) sentiments.negative++; else sentiments.neutral++;
+                        });
+                        const sentCfg = { type: 'pie', data: { labels: ['Positive', 'Neutral', 'Negative'], datasets: [{ data: [sentiments.positive, sentiments.neutral, sentiments.negative], backgroundColor: ['#43e97b', '#4facfe', '#ff6384'] }] } };
+                        const buf4 = await chartRenderer.renderToBuffer(sentCfg);
+                        doc.moveDown(0.2);
+                        doc.fontSize(12).font('Helvetica-Bold').text('Feedback Sentiment', { align: 'left' });
+                        doc.image(buf4, { fit: [500, 260], align: 'center' });
+
+                        // Sample comments
+                        const sampleComments = feedbackDocs.filter(f => (f.comment || f.comments || '').toString().trim() !== '').slice(0, 5).map(f => ({ rating: f.rating || '', text: (f.comment || f.comments || '').toString().trim() }));
+                        if (sampleComments.length) {
+                            doc.addPage();
+                            doc.fontSize(11).font('Helvetica-Bold').text('Sample Feedback Comments');
+                            doc.moveDown(0.2);
+                            doc.fontSize(10).font('Helvetica');
+                            sampleComments.forEach((c, i) => { doc.text(`${i+1}. (${c.rating}) ${c.text}`); doc.moveDown(0.1); });
+                        }
+                    } catch (e) {
+                        console.error('Feedback charts rendering error', e);
+                    }
+                }
+
+                // Footer
+                doc.addPage();
+                doc.moveDown(1);
+                doc.fontSize(9).text('Generated by Club Management System', { align: 'center' });
+                doc.end();
+            } catch (err) {
+                console.error('PDF route error', err);
+                try { doc.end(); } catch (_) {}
+            }
+        };
+    });
+});

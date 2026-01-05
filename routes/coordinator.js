@@ -206,7 +206,10 @@ router.get("/events/:eventId/budget", isCoordinator, (req, res) => {
     
     const sql = `
       SELECT b.*, 
-             (SELECT COALESCE(SUM(Amount), 0) FROM expenditure e WHERE e.EventID = b.EventID AND e.Category = b.Category) AS Spent
+             (SELECT COALESCE(SUM(Amount), 0) 
+             FROM expenditure e 
+             WHERE e.EventID = b.EventID
+              AND e.Category = b.Category) AS Spent
       FROM budget b
       WHERE b.EventID = ?
     `;

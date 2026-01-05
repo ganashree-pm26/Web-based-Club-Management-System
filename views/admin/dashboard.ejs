@@ -124,6 +124,17 @@
             transform: translateY(-1px);
             box-shadow: 0 8px 20px rgba(240, 147, 251, 0.4);
         }
+        .btn-download {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white !important;
+            font-weight: 500;
+        }
+        .btn-download:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -269,6 +280,7 @@
                             </div>
                         </div>
                         <div class="col-md-4 event-actions d-flex flex-column justify-content-start">
+                            <a href="/admin/events/<%= event.EventID %>/download-pdf" class="btn btn-download btn-sm w-100 mb-2" download>📥 Download PDF</a>
                             <a href="/admin/events/<%= event.EventID %>/budget" class="btn btn-allocate btn-sm w-100 mb-2">Allocate Budget</a>
                             <a href="/events/edit/<%= event.EventID %>" class="btn btn-edit btn-sm w-100 mb-2">Edit Event</a>
                             <a href="/events/delete/<%= event.EventID %>" class="btn btn-delete btn-sm w-100" onclick="return confirm('Delete this event?')">Delete Event</a>
